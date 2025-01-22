@@ -1,5 +1,18 @@
-FROM wxhere/bitcomet-webui AS official
+FROM alpine AS builder
 
-FROM debian:stable-slim AS post-bar
+COPY builder.sh builder.sh
 
-COPY --from=official /root/BitCometApp /BitCometApp
+RUN sh builder.sh
+
+FROM wxhere/bitcomet-webui AS release
+
+COPY --from=builder /files /files
+COPY /files /files
+ENV PATH="$PATH:/files:/files/jre/bin"
+
+RUN chmod +x /files/*
+
+CMD ["start.sh"]
+
+LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker"
+LABEL org.opencontainers.image.description="Unofficial BitComet by Post-Bar"
