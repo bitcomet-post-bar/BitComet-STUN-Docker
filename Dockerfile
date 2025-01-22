@@ -8,7 +8,7 @@ FROM wxhere/bitcomet-webui AS release
 
 COPY --from=builder /files /files
 COPY /files /files
-ENV PATH="$PATH:/files:/files/jre/bin"
+ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
 
 RUN chmod +x /files/*
 
