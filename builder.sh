@@ -19,3 +19,5 @@ unzip PBH.zip -d /files
 for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 23 $JAR >>/tmp/DEPS; done
 DEPS=$(cat /tmp/DEPS | awk '{print$NF}' | grep -E '^(java|jdk)\.' | sort | uniq | tr '\n' ',' | sed 's/,$//)
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
+
+exit 0
