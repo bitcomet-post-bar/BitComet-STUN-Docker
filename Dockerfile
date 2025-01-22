@@ -1,5 +1,10 @@
 FROM wxhere/bitcomet-webui AS official
-FROM gcr.io/distroless/cc-debian12:latest AS cc
+
+RUN 
+
 FROM alpine AS post-bar
+
 COPY --from=official /root/BitCometApp /BitCometApp
-COPY --from=cc --chmod=755 --chown=root:root /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
+ADD https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk glibc.apk
+
+RUN apk add glibc.apk && rm glibc.apk
