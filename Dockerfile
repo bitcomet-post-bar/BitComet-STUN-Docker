@@ -1,4 +1,4 @@
-FROM eclipse-temurin:23-jdk-alpine AS builder
+FROM bellsoft/liberica-runtime-container:jdk-23-musl AS builder
 
 COPY builder.sh builder.sh
 
