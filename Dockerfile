@@ -1,4 +1,4 @@
-FROM bellsoft/liberica-runtime-container:jdk-23-musl AS builder
+FROM bellsoft/liberica-runtime-container:jdk-all-23-glibc AS builder
 
 COPY builder.sh builder.sh
 
