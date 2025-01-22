@@ -1,4 +1,4 @@
-FROM alpine AS builder
+FROM eclipse-temurin:23-jdk-alpine AS builder
 
 COPY builder.sh builder.sh
 
