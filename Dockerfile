@@ -1,7 +1,5 @@
 FROM wxhere/bitcomet-webui AS official
 
-RUN 
-
 FROM alpine AS post-bar
 
 COPY --from=official /root/BitCometApp /BitCometApp
