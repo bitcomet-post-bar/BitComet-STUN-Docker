@@ -1,6 +1,6 @@
 mkdir -p /files
 
-apk add jq unzip openjdk21 binutils
+apk add curl jq unzip openjdk21 binutils
 
 # 下载 NATMap，识别对应的指令集架构
 ARCH=$(cat etc/apk/arch)
