@@ -16,7 +16,7 @@ wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanH
 unzip PBH.zip -d /files
 
 # 生成 PeerBanHelper 的 JRE
-wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanHelper_${VER}_Portable.zip -O /tmp/PBH.zip
+wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanHelper_Windows_${VER}_Portable.zip -O /tmp/PBH.zip
 unzip /tmp/PBH.zip -d /tmp
 DEPS=$(cat /tmp/PeerBanHelper/jre/release | grep MODULES | grep -oE '".*"' | tr -d '"' | tr ' ' ',')
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
