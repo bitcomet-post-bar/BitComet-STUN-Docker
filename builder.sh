@@ -4,7 +4,7 @@ apt-get update
 apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
 
 # 下载 NATMap，识别对应的指令集架构
-ARCH=$(cat etc/apk/arch)
+ARCH=$(arch)
 case $ARCH in
   x86_64) DL=x86_64;;
   aarch64) DL=arm64;;
