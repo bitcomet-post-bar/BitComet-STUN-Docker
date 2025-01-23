@@ -27,3 +27,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: docker.io/oniicyan99/bitcomet:test
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}
