@@ -1,4 +1,4 @@
-FROM busybox:stable-uclibc as busybox
+FROM busybox:stable-uclibc AS busybox
 FROM wxhere/bitcomet-webui AS official
 FROM gcr.io/distroless/static-debian12 AS release
 COPY --from=busybox /bin/sh /bin/sh
