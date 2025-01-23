@@ -9,6 +9,7 @@ COPY --from=builder /files /files
 COPY --from=official /root/BitCometApp/usr /files/BitComet
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
+ENV LANG=C.UTF-8
 ENV GLIBC_VERSION=2.35-r1
 RUN apk add --update curl miniupnpc && \
     curl -Lo /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
