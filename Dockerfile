@@ -1,4 +1,4 @@
-FROM bellsoft/liberica-runtime-container:jdk-all-23-musl AS builder
+FROM wxhere/bitcomet-webui AS builder
 
 COPY builder.sh builder.sh
 
