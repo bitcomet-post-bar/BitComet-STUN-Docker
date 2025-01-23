@@ -3,18 +3,15 @@ COPY builder.sh builder.sh
 ENV ALPINE_VER=3.21.2
 RUN sh builder.sh
 
-FROM scratch AS release
-
-COPY --from=builder /alpine /
+FROM alpine AS release
+# COPY --from=builder /alpine /
 COPY --from=builder /files /files
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
-
 # RUN chmod +x /files/* \
 #    && apt-get update \
 #    && apt-get install -y miniupnpc \
 #    && rm -rf /var/lib/apt/lists/*
-
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker"
