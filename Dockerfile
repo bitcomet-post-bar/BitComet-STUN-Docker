@@ -4,19 +4,17 @@ COPY builder.sh builder.sh
 
 RUN sh builder.sh
 
-FROM wxhere/bitcomet-webui AS official
-
-FROM busybox:stable-glibc AS release
+FROM wxhere/bitcomet-webui AS release
 
 COPY --from=builder /files /files
 COPY --from=official /root/BitCometApp /files/BitCometApp
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
 
-# RUN chmod +x /files/* \
-#    && apt-get update \
-#    && apt-get install -y miniupnpc \
-#    && rm -rf /var/lib/apt/lists/*
+RUN chmod +x /files/* \
+    && apt-get update \
+    && apt-get install -y miniupnpc \
+    && rm -rf /var/lib/apt/lists/*
 
 CMD ["start.sh"]
 
