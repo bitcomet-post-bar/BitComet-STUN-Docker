@@ -1,6 +1,7 @@
 mkdir -p /files
 
-apk add curl jq
+apt-get update
+apt-get install -y wget curl jq unzip openjdk-21-jdk
 
 # 下载 NATMap，识别对应的指令集架构
 ARCH=$(cat etc/apk/arch)
@@ -16,6 +17,6 @@ wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanH
 unzip PBH.zip -d /files
 
 # 生成 PeerBanHelper 的 JRE
-for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 23 $JAR >>/tmp/DEPS; done
+for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 21 $JAR >>/tmp/DEPS; done
 DEPS=$(cat /tmp/DEPS | awk '{print$NF}' | grep -E '^(java|jdk)\.' | sort | uniq | tr '\n' ',' | sed 's/,$//')
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
