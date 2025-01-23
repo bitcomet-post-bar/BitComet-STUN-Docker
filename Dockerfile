@@ -10,7 +10,7 @@ COPY --from=official /root/BitCometApp/usr /files/BitComet
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
 ENV LANG=C.UTF-8
-ARG GLIBC_VERSION= 2.32-r0
+ARG GLIBC_VERSION=2.32-r0
 RUN apk add --update curl miniupnpc libstdc++ && \
     curl -Lo /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
     curl -Lo glibc.apk "https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk" && \
