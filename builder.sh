@@ -1,6 +1,6 @@
 ARCH=$(arch)
 mkdir -p /files
-apk add curl jq openjdk21
+apk add curl jq openjdk21 binutils
 # apt-get update
 # apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
 
