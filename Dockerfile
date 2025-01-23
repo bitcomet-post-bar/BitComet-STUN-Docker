@@ -1,17 +1,24 @@
-FROM wxhere/bitcomet-webui AS builder
+FROM alpine AS builder
 COPY builder.sh builder.sh
-ENV ALPINE_VER=3.21.2
 RUN sh builder.sh
 
+FROM wxhere/bitcomet-webui AS official
+
 FROM alpine AS release
-# COPY --from=builder /alpine /
 COPY --from=builder /files /files
+COPY --from=official /root/BitCometApp/usr /files/BitComet
 COPY /files /files
-ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
-# RUN chmod +x /files/* \
-#    && apt-get update \
-#    && apt-get install -y miniupnpc \
-#    && rm -rf /var/lib/apt/lists/*
+ENV PATH "$PATH:/files:/files/PeerBanHelper/jre/bin"
+ENV GLIBC_VERSION 2.35-r1
+RUN apk add --update curl miniupnpc && \
+    curl -Lo /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
+    curl -Lo glibc.apk "https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk" && \
+    curl -Lo glibc-bin.apk "https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}.apk" && \
+    apk add --force-overwrite glibc-bin.apk glibc.apk && \
+    /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc-compat/lib && \
+    echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
+    apk del curl && \
+    rm -rf /var/cache/apk/* glibc.apk glibc-bin.apk
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker"
