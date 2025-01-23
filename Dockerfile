@@ -8,8 +8,8 @@ FROM alpine AS release
 COPY --from=builder /files /files
 COPY --from=official /root/BitCometApp/usr /files/BitComet
 COPY /files /files
-ENV PATH "$PATH:/files:/files/PeerBanHelper/jre/bin"
-ENV GLIBC_VERSION 2.35-r1
+ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin"
+ENV GLIBC_VERSION=2.35-r1
 RUN apk add --update curl miniupnpc && \
     curl -Lo /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
     curl -Lo glibc.apk "https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk" && \
