@@ -1,7 +1,8 @@
 ARCH=$(arch)
 mkdir -p /files
-apt-get update
-apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
+apk add curl jq openjdk21
+# apt-get update
+# apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
 
 # 下载 NATMap，识别对应的指令集架构
 case $ARCH in
