@@ -21,6 +21,6 @@ DEPS=$(cat /tmp/DEPS | awk '{print$NF}' | grep -E '^(java|jdk)\.' | sort | uniq 
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
 
 # 生成 Alpine Linux 镜像
-wget https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/$ARCH/alpine-minirootfs-${ALPINE_VER}-${ARCH}.tar.gz -O alpine.tar.gz
-mkdir -p /alpine
-tar xzf alpine.tar.gz -C /alpine
+# wget https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/$ARCH/alpine-minirootfs-${ALPINE_VER}-${ARCH}.tar.gz -O alpine.tar.gz
+# mkdir -p /alpine
+# tar xzf alpine.tar.gz -C /alpine
