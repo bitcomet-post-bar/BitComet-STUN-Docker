@@ -1,7 +1,7 @@
 mkdir -p /files
 
 apt-get update
-apt-get install -y wget curl jq unzip openjdk-21-jdk
+apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
 
 # 下载 NATMap，识别对应的指令集架构
 ARCH=$(cat etc/apk/arch)
