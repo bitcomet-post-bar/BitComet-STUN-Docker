@@ -1,6 +1,6 @@
+FROM wxhere/bitcomet-webui AS official
 FROM gcr.io/distroless/cc-debian12 AS cc
 FROM alpine AS distro
-FROM wxhere/bitcomet-webui AS official
 COPY --from=cc --chmod=755 --chown=root:root /lib/*-linux-gnu/ld-linux-* /usr/local/lib/
 RUN mkdir -p /tmp/lib
 RUN ln -s /usr/local/lib/ld-linux-* /tmp/lib/
