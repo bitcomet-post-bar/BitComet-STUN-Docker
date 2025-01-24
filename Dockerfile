@@ -14,6 +14,7 @@ RUN chmod +x /files/* && \
     apt-get update && \
     apt-get install -y miniupnpc && \
     rm -rf /var/lib/apt/lists/*
+VOLUME /tmp
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker" \
