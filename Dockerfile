@@ -14,6 +14,7 @@ RUN chmod +x /files/* && \
     apt-get update && \
     apt-get install -y miniupnpc && \
     rm -rf /var/lib/apt/lists/* && \
+    mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /Downloads /root/Downloads && \
     ln -s /PeerBanHelper /PBHDIR
