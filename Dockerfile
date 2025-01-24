@@ -13,7 +13,10 @@ ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin" \
 RUN chmod +x /files/* && \
     apt-get update && \
     apt-get install -y miniupnpc && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    ln -s /BitComet /root/.config/BitComet && \
+    ln -s /Downloads /root/Downloads && \
+    ln -s /PeerBanHelper /PBHDIR
 VOLUME /tmp
 CMD ["start.sh"]
 
