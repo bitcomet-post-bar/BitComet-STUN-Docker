@@ -13,4 +13,4 @@ RUN chmod +x /files/* && \
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker"
-LABEL org.opencontainers.image.description="Unofficial BitComet by Post-Bar"
+LABEL org.opencontainers.image.description="BitComet by Post-Bar (unofficial mod)"
