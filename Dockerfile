@@ -2,11 +2,8 @@ FROM wxhere/bitcomet-webui AS builder
 COPY builder.sh builder.sh
 RUN sh builder.sh
 
-FROM wxhere/bitcomet-webui AS official
-
 FROM ubuntu:20.04 AS release
 COPY --from=builder /files /files
-COPY --from=official /root/BitCometApp/usr /files/BitComet
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin" \
     LANG=C.UTF-8
