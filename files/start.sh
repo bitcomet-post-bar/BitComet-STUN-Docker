@@ -25,7 +25,7 @@ mv -f /tmp/DockerLogs.log /BitComet/DockerLogs.log
 BC_CFG=/BitComet/BitComet.xml
 [ -f $BC_CFG ] || (
 echo BitComet 配置文件不存在，执行初始化 | LOG
-cp /files/BitComet/BitComet.xml $BC_CFG )
+cp /files/BitComet.xml $BC_CFG )
 grep DefaultDownloadPath $BC_CFG | grep /Downloads >/dev/null || sed 's,<Settings>,<Settings><DefaultDownloadPath>/Downloads</DefaultDownloadPath>,' -i $BC_CFG
 grep EnableTorrentShare $BC_CFG | grep false >/dev/null || sed 's,<Settings>,<Settings><EnableTorrentShare>false</EnableTorrentShare>,' -i $BC_CFG
 
@@ -50,10 +50,10 @@ fi
 export WEBUI_USERNAME=$(grep WebInterfaceUsername $BC_CFG | grep -oE '>.*<' | tr -d '><')
 [ $WEBUI_PASSWORD ] || \
 export WEBUI_PASSWORD=$(grep WebInterfacePassword $BC_CFG | grep -oE '>.*<' | tr -d '><')
-[ $WEBUI_USERNAME = 'test' ] && {
+[ "$WEBUI_USERNAME" = test ] && {
 unset WEBUI_USERNAME
 echo 禁止使用用户名 test，已清除 ;}
-[ $WEBUI_PASSWORD = 'test' ] && {
+[ "$WEBUI_PASSWORD" = test ] && {
 unset WEBUI_PASSWORD
 echo 禁止使用密码 test，已清除 ;}
 [ $WEBUI_USERNAME ] || {
