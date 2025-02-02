@@ -16,7 +16,7 @@ VER=$(curl -s https://api.github.com/repos/PBH-BTN/PeerBanHelper/releases/latest
 wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanHelper_${VER}.zip -O PBH.zip
 unzip PBH.zip -d /files
 wget https://raw.githubusercontent.com/PBH-BTN/PeerBanHelper/refs/heads/master/src/main/resources/config.yml -O /files/PeerBanHelper/config.yml
-sed 's/"//g' /files/PeerBanHelper/config.yml
+sed 's/"//g' -i /files/PeerBanHelper/config.yml
 
 # 生成 PeerBanHelper 的 JRE
 for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 21 $JAR >>/tmp/DEPS 2>/dev/null; done
