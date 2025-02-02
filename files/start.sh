@@ -27,6 +27,7 @@ BC_CFG=/BitComet/BitComet.xml
 echo BitComet 配置文件不存在，执行初始化 | LOG
 cp /files/BitComet.xml $BC_CFG )
 grep DefaultDownloadPath $BC_CFG | grep /Downloads >/dev/null || sed 's,<Settings>,<Settings><DefaultDownloadPath>/Downloads</DefaultDownloadPath>,' -i $BC_CFG
+grep EnableUPnP $BC_CFG | grep false >/dev/null || sed 's,<Settings>,<Settings><EnableUPnP>false</EnableUPnP>,' -i $BC_CFG
 grep EnableTorrentShare $BC_CFG | grep false >/dev/null || sed 's,<Settings>,<Settings><EnableTorrentShare>false</EnableTorrentShare>,' -i $BC_CFG
 
 # 初始化 BitComet 保存位置
