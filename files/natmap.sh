@@ -32,7 +32,7 @@ echo 尝试使用 br-lan 接口添加 UPnP 规则 | LOG
 UpnpStart='upnpc '$UpnpArgs' -m br-lan '$UpnpUrl' -i -e "STUN BitComet Docker" -a '$UpnpAddr' '$WANPORT' '$LANPORT' '$L4PROTO''
 echo 本次 UPnP 执行命令 | LOG
 echo $UpnpStart | LOG
-eval $UpnpStart >/dev/null ))
+eval $UpnpStart))
 
 echo 更新 BitComet 监听端口 | LOG
 /files/BitComet/bin/bitcometd --bt_port $WANPORT &
