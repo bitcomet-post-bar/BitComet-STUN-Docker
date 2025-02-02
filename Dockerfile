@@ -14,8 +14,8 @@ RUN chmod +x /files/* && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
-    ln -s /Downloads /root/Downloads && \
-    ln -s /PeerBanHelper /PBHDIR
+    ln -s /PeerBanHelper /PBHDIR && \
+    ln -s /Downloads /root/Downloads
 # VOLUME /tmp
 CMD ["start.sh"]
 
