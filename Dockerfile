@@ -14,9 +14,9 @@ RUN chmod +x /files/* && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
-    ln -s /Downloads /tmp && \
+    ln -s /Downloads /root/Downloads && \
     ln -s /PeerBanHelper /PBHDIR
-VOLUME /tmp
+# VOLUME /tmp
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker" \
