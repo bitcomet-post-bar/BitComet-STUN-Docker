@@ -168,7 +168,7 @@ cat >/tmp/PBH_CLIENT_STR <<EOF
     increment-ban: true
     verify-ssl: false
 EOF
-sed '/^client:/r/tmp/PBH_CLIENT_STR' $PBH_CFG ;}
+sed '/^client:/r/tmp/PBH_CLIENT_STR' -i $PBH_CFG ;}
 PBH_CLIENT_SPACE=$(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG | grep -o '^ \+')
 [ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_USERNAME' *$/p}' $PBH_CFG)" ] || (
 echo PeerBanHelper 配置中的本机 BitComet WebUI 用户名不正确，执行更正 | LOG
