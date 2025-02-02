@@ -10,7 +10,7 @@ OWNADDR=$6
 LOG() { tee -a /BitComet/DockerLogs.log ;}
 
 echo 当前穿透通道为 $WANADDR:$WANPORT，即将更新 BitComet 监听端口 | LOG
-/files/BitComet/bin/bitcometd --bt_port $WANPORT
+/files/BitComet/bin/bitcometd --bt_port $WANPORT &
 
 echo 开始执行 UPnP | LOG
 [ $UpnpInterface ] && UpnpInterface='-m '$UpnpInterface''
