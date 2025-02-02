@@ -13,4 +13,5 @@ echo 当前穿透通道为 $WANADDR:$WANPORT，即将更新 BitComet 监听端�
 
 /files/BitComet/bin/bitcometd --bt_port $WANPORT
 
-upnpc -4 -i -e "STUN BitComet Docker" -a @ $WANPORT $LANPORT $L4PROTO
+UPNPC=$(upnpc -4 -i -e "STUN BitComet Docker" -a @ $WANPORT $LANPORT $L4PROTO 2>&1 >/dev/null)
+[ $UPNPC ] && echo $UPNPC | LOG
