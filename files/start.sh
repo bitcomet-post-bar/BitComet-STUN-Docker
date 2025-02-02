@@ -197,4 +197,5 @@ else
 fi )
 
 # 配置 NATMap
+echo 开始执行 NATMap 进行穿透 | LOG
 natmap -4 -s turn.cloudflare.com -h qq.com -b 61413 -k 25 -e /files/natmap.sh
