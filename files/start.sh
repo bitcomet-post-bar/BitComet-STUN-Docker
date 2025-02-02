@@ -252,7 +252,8 @@ if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
 	exec sh
 else
-	echo 执行 PeerBanHelper | LOG
+	echo 60 秒后执行 PeerBanHelper | LOG
+	sleep 60
 	cd /PeerBanHelper
 	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
 fi
