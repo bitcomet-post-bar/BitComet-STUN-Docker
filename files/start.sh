@@ -34,7 +34,7 @@ grep EnableTorrentShare $BC_CFG | grep false >/dev/null || sed 's,<Settings>,<Se
 if mount | grep ' /Downloads ' >/dev/null; then
 	echo /Downloads 目录已挂载 | LOG
 else
-	echo /Downloads 目录未挂载，默认保存位置将不可用 | LOG
+	echo /Downloads 目录未挂载，默认保存位置在容器层，重启后可能会丢失 | LOG
 	BC_DL_FLAG=1
 fi
 BC_DL_DIR=$(mount | grep -E '^/' | grep -vE ' (/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts) ' | awk '{print$3}')
@@ -43,7 +43,7 @@ if [ $BC_DL_DIR ]; then
 	for DIR in $BC_DL_DIR; do echo $DIR | LOG; done
 	sed 's,<Settings>,<Settings><DirCandidate>'$(echo $BC_DL_DIR | sed 's, /,|/,')'</DirCandidate>,' -i $BC_CFG
 else
-	[ $BC_DL_FLAG ] && echo 未挂载任何下载目录，任务将无法开始 | LOG
+	[ $BC_DL_FLAG ] && echo 未挂载任何自定义下载目录 | LOG
 fi
 
 # 初始化 BitComet WebUI 用户名与密码
