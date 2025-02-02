@@ -25,7 +25,7 @@ echo 本次 UPnP 规则：转发 外部端口 $LANPORT 至 内部端口 $WANPORT
 UpnpStart='upnpc '$UpnpArgs' '$UpnpInterface' '$UpnpUrl' -i -e "STUN BitComet Docker" -a '$UpnpAddr' '$WANPORT' '$LANPORT' '$L4PROTO''
 echo 本次 UPnP 执行命令 | LOG
 echo $UpnpStart | LOG
-$UpnpErr=$(eval $UpnpStart 2>&1 >/dev/null)
+UpnpErr=$(eval $UpnpStart 2>&1 >/dev/null)
 [ $UpnpErr ] && echo 添加 UPnP 规则失败，错误信息如下 | LOG && echo $UpnpErr | LOG && \
 [ $UpnpInterface ] || (
 [ $(ls /sys/class/net | grep -o br-lan) ] && (
