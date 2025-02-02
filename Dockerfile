@@ -2,7 +2,8 @@ FROM wxhere/bitcomet-webui AS builder
 COPY builder.sh builder.sh
 RUN sh builder.sh
 
-FROM ubuntu AS release
+FROM debian:stable-slim AS release
+# FROM ubuntu AS release
 COPY --from=builder /files /files
 COPY /files /files
 ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin" \
