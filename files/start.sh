@@ -1,9 +1,9 @@
 #!/bin/sh
 
 # 初始化变量
+[ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 [ $BITCOMET_WEBUI_USERNAME ] && export WEBUI_USERNAME=$BITCOMET_WEBUI_USERNAME
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
-[ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 
 # 初始化日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
@@ -28,20 +28,20 @@ echo BitComet 配置文件不存在，执行初始化 | LOG
 cp /files/BitComet/BitComet.xml $BC_CFG )
 grep EnableTorrentShare $BC_CFG | grep false >/dev/null || sed 's,<Settings>,<Settings><EnableTorrentShare>false</EnableTorrentShare>,' -i $BC_CFG
 
-# 初始化 BitComet 下载保存位置
+# 初始化 BitComet 保存位置
 if mount | grep ' /Downloads ' >/dev/null; then
-	echo /Downloads 与 /root/Downloads 为同一目录 | LOG
+	echo /Downloads 目录已挂载 | LOG
 else
-	echo /Downloads 目录未挂载，默认下载保存位置 /root/Downloads 将不可用 | LOG
+	echo /Downloads 目录未挂载，默认保存位置将映射到 /tmp | LOG
 	BC_DL_FLAG=1
 fi
 BC_DL_DIR=$(mount | grep -E '^/' | grep -vE ' (/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts) ' | awk '{print$3}')
 if [ $BC_DL_DIR ]; then
-	echo 以下目录将作为 BitComet 的自定义下载保存位置 | LOG
+	echo 以下目录将作为 BitComet 的自定义保存位置 | LOG
 	for DIR in $BC_DL_DIR; do echo $DIR | LOG; done
 	sed 's,<Settings>,<Settings><DirCandidate>'$(echo $BC_DL_DIR | sed 's, /,|/,')'</DirCandidate>,' -i $BC_CFG
 else
-	[ $BC_DL_FLAG ] && echo 未挂载任何下载目录，任务将无法开始 | LOG
+	[ $BC_DL_FLAG ] && echo 未挂载任何下载目录，任务文件可能会丢失 | LOG
 fi
 
 # 初始化 BitComet WebUI 用户名与密码
@@ -225,7 +225,7 @@ fi
 
 # 执行 NATMap 及 BitComet
 rm -f /BitComet/DockerSTUNPORT
-if [ "Stun" = 0 ]; then
+if [ "STUN" = 0 ]; then
 	echo 已禁用 STUN，直接执行 BitComet | LOG
 	/files/BitComet/bin/bitcometd &
 else
