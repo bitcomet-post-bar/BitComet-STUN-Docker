@@ -158,7 +158,7 @@ fi
 [ $(grep '^client: *$' $PBH_CFG) ] || echo client: >>$PBH_CFG
 [ $(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG) ] || {
 echo PeerBanHelper 未配置本机 BitComet，执行初始化 | LOG
-PBH_CLIENT_STR=$(cat <<EOF
+cat >/tmp/PBH_CLIENT_STR <<EOF
   BitCometDocker:
     type: bitcomet
     endpoint: http://127.0.0.1:$BITCOMET_WEBUI_PORT
@@ -168,8 +168,7 @@ PBH_CLIENT_STR=$(cat <<EOF
     increment-ban: true
     verify-ssl: false
 EOF
-)
-sed '/^client:/a\'"$PBH_CLIENT_STR"'' -i $PBH_CFG ;}
+sed '/^client:/r/tmp/PBH_CLIENT_STR' $PBH_CFG ;}
 PBH_CLIENT_SPACE=$(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG | grep -o '^ \+')
 [ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_USERNAME' *$/p}' $PBH_CFG)" ] || (
 echo PeerBanHelper 配置中的本机 BitComet WebUI 用户名不正确，执行更正 | LOG
@@ -199,3 +198,7 @@ fi )
 # 配置 NATMap
 echo 开始执行 NATMap 进行穿透 | LOG
 natmap -4 -s turn.cloudflare.com -h qq.com -b 61413 -k 25 -e /files/natmap.sh
+
+# 执行 BitComet 与 PeerBanHelper
+/files/BitComet/bin/bitcometd &
+( cd /PeerBanHelper; java -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar )
