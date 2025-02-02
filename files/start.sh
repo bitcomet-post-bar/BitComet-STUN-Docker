@@ -1,9 +1,11 @@
 #!/bin/sh
 
+# 初始化变量
 [ $BITCOMET_WEBUI_USERNAME ] && export WEBUI_USERNAME=$BITCOMET_WEBUI_USERNAME
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
+[ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 
-# 定义日志函数
+# 初始化日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
 
 echo 开始执行 BitComet 贴吧修改版 | tee /tmp/DockerLogs.log
@@ -73,24 +75,24 @@ if [ $BITCOMET_WEBUI_PORT ]; then
 	# if [[ $BITCOMET_WEBUI_PORT =~ ^[0-9]+$ ]] && [ $BITCOMET_WEBUI_PORT -le 65535 ]; then
 	if [ $(echo $BITCOMET_WEBUI_PORT | grep -E '^[0-9]+$') ] && [ $BITCOMET_WEBUI_PORT -le 65535 ]; then
 		[ $BITCOMET_WEBUI_PORT -ge 1024 ] || echo BitComet WebUI 端口指定为 1024 以下，可能无法监听 | LOG
-		BC_PORT_ORIG=$BITCOMET_WEBUI_PORT
+		BC_WEBUI_PORT_ORIG=$BITCOMET_WEBUI_PORT
 	else
 		echo BitComet WebUI 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
-		BC_PORT_FLAG=1
+		BC_WEBUI_PORT_FLAG=1
 	fi
 else
 	echo BitComet WebUI 端口未指定，执行初始化 | LOG
-	BC_PORT_FLAG=1
+	BC_WEBUI_PORT_FLAG=1
 fi
-[ $BC_PORT_FLAG ] && export BITCOMET_WEBUI_PORT=8080
+[ $BC_WEBUI_PORT_FLAG ] && export BITCOMET_WEBUI_PORT=8080
 while (>/dev/tcp/127.0.0.1/$BITCOMET_WEBUI_PORT) 2>/dev/null; do
 	export BITCOMET_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
-	BC_PORT_SHUF=1
+	BC_WEBUI_PORT_SHUF=1
 done
-if [ $BC_PORT_FLAG ] || [ ! $BC_PORT_SHUF ]; then
+if [ $BC_WEBUI_PORT_FLAG ] || [ ! $BC_WEBUI_PORT_SHUF ]; then
 	echo BitComet WebUI 当前地址为 http://${HOSTNAME}:$BITCOMET_WEBUI_PORT | LOG
 else
-	echo BitComet WebUI 端口 $BC_PORT_ORIG 被占用，当前地址为 http://${HOSTNAME}:$BITCOMET_WEBUI_PORT | LOG
+	echo BitComet WebUI 端口 $BC_WEBUI_PORT_ORIG 被占用，当前地址为 http://${HOSTNAME}:$BITCOMET_WEBUI_PORT | LOG
 fi
 
 # 初始化 PeerBanHelper 配置文件
@@ -107,7 +109,7 @@ fi
 
 # 初始化 PeerBanHelper WebUI Token
 [ $PBH_WEBUI_TOKEN ] || \
-export PBH_WEBUI_TOKEN=$(sed -n '/^server:/,/^[^ ]/{/^ \+token:/p}' $PBH_CFG | awk -F : '{print$2}' | tr -d ' "')
+export PBH_WEBUI_TOKEN=$(sed -n '/^server:/,/^[^ ]/{/^ \+token:/p}' $PBH_CFG | awk -F : '{print$2}')
 [ $PBH_WEBUI_TOKEN ] || {
 export PBH_WEBUI_TOKEN=$(cat /proc/sys/kernel/random/uuid)
 echo PeerBanHelper WebUI Token 未指定，随机生成以下 Token | LOG
@@ -195,10 +197,61 @@ else
 	sed '/^ \+BitCometDocker:/a\'"$PBH_CLIENT_ENDPOINT_STR"'' -i $PBH_CFG
 fi )
 
-# 配置 NATMap
-echo 开始执行 NATMap 进行穿透 | LOG
-natmap -4 -s turn.cloudflare.com -h qq.com -b 61413 -k 25 -e /files/natmap.sh
+# 初始化 BitComet BT 端口
+[ $BITCOMET_BT_PORT ] || \
+export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><')
+if [ $BITCOMET_BT_PORT ]; then
+	if [ $(echo $BITCOMET_BT_PORT | grep -E '^[0-9]+$') ] && [ $BITCOMET_BT_PORT -le 65535 ]; then
+		[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
+		BC_BT_PORT_ORIG=$BITCOMET_BT_PORT
+	else
+		echo BitComet BT 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
+		BC_BT_PORT_FLAG=1
+	fi
+else
+	echo BitComet BT 端口未指定，执行初始化 | LOG
+	BC_BT_PORT_FLAG=1
+fi
+[ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=6082
+while (>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null; do
+	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
+	BC_BT_PORT_SHUF=1
+done
+if [ $BC_BT_PORT_FLAG ] || [ ! $BC_BT_PORT_SHUF ]; then
+	echo BitComet 当前 BT 端口为 $BITCOMET_BT_PORT | LOG
+else
+	echo BitComet BT 端口 $BC_BT_PORT_ORIG 被占用，当前端口为 $BITCOMET_BT_PORT | LOG
+fi
 
-# 执行 BitComet 与 PeerBanHelper
-/files/BitComet/bin/bitcometd &
-( cd /PeerBanHelper; java -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar )
+# 执行 NATMap 及 BitComet
+rm -f /BitComet/DockerSTUNPORT
+if [ "Stun" = 0 ]; then
+	echo 已禁用 STUN，直接执行 BitComet | LOG
+	/files/BitComet/bin/bitcometd &
+else
+	echo 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口 | LOG
+	[ $StunServer ] || StunServer=turn.cloudflare.com
+	[ $StunHttpServer ] || StunHttpServer=qq.com
+	[ $StunInterval ] || StunInterval=25
+	[ $StunInterface ] && StunInterface='-i '$StunInterface''
+	[ $StunUdp ] && StunUdp='-u'
+	if [ $StunForward ]; then
+		[ $StunForwardAddr ] || StunForwardAddr=127.0.0.1
+		StunForward='-t 127.0.0.1 -p '$BITCOMET_BT_PORT''
+		echo 已启用 STUN 转发，目标为 127.0.0.1:$BITCOMET_BT_PORT
+	fi
+	NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$BITCOMET_BT_PORT' -k '$StunInterval' '$StunInterface' '$StunForward' '$StunUdp' -e /files/natmap.sh'
+	echo 本次 NATMap 执行命令
+	echo $NatmapStart
+	eval $NatmapStart
+fi
+
+# 执行 PeerBanHelper
+if [ "$PBH" = 0 ]; then
+	echo 已禁用 PeerBanHelper | LOG
+	exec sh
+else
+	echo 执行 PeerBanHelper | LOG
+	cd /PeerBanHelper
+	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
+fi
