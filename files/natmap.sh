@@ -17,7 +17,6 @@ touch /BitComet/DockerSTUN.log
 echo [$(date)] $WANADDR:$WANPORT '->' $OWNADDR:$LANPORT '->' $WANPORT >>/BitComet/DockerSTUN.log
 echo $WANPORT $LANPORT >/BitComet/DockerSTUNPORT
 
-echo 执行 UPnP | LOG
 [ $UpnpInterface ] && export UpnpInterface='-m '$UpnpInterface''
 [ $UpnpUrl ] && export UpnpUrl='-u '$UpnpUrl''
 [ $UpnpAddr ] || export UpnpAddr=@
@@ -26,7 +25,7 @@ UpnpStart='upnpc '$UpnpArgs' '$UpnpInterface' '$UpnpUrl' -i -e "STUN BitComet Do
 echo 本次 UPnP 执行命令 | LOG
 echo $UpnpStart | LOG
 UpnpErr=$(eval $UpnpStart 2>&1 >/dev/null)
-[ $UpnpErr ] && echo 添加 UPnP 规则失败，错误信息如下 | LOG && echo $UpnpErr | LOG && \
+[ "$UpnpErr" ] && echo 添加 UPnP 规则失败，错误信息如下 | LOG && echo $UpnpErr | LOG && \
 [ $UpnpInterface ] || (
 [ $(ls /sys/class/net | grep -o br-lan) ] && (
 echo 尝试使用 br-lan 接口添加 UPnP 规则 | LOG
