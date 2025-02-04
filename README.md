@@ -24,7 +24,7 @@ STUN 穿透需要锥形 NAT 环境及 网关开启 UPnP 功能。
 | BITCOMET_WEBUI_PASSWORD | BitComet WebUI 密码 | 随机生成 |
 | BITCOMET_WEBUI_PORT | BitComet WebUI 端口 | `8080` |
 | BITCOMET_BT_PORT | BitComet BT 端口 | `6082` |
-| PBH_WEBUI_TOKEN | PeerBanHelper WebUI Token | 随机生成成 |
+| PBH_WEBUI_TOKEN | PeerBanHelper WebUI Token | 随机生成 |
 | PBH_WEBUI_PORT | PeerBanHelper WebUI 端口 | `9898` |
 | PBH | PeerBanHelper 开关 | 无 |
 | STUN | STUN 穿透开关 | 无 |
