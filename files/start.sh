@@ -237,7 +237,8 @@ else
 #		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 #	done
 	echo 启动 BitComet 后执行 NATMap | LOG
-	/files/BitComet/bin/bitcometd & && sleep 5
+	/files/BitComet/bin/bitcometd &
+	sleep 5
 	[ $StunServer ] || StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || StunHttpServer=qq.com
 	[ $StunInterval ] || StunInterval=25
