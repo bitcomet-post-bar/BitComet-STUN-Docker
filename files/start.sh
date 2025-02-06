@@ -233,9 +233,9 @@ if [ "STUN" = 0 ]; then
 else
 	echo 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口 | LOG
 	StunBindPort=$BITCOMET_BT_PORT
-#	while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null" || [ $(echo $BITCOMET_BT_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$PBH_WEBUI_PORT$|^$StunBindPort$") ] ; do
-#		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
-#	done
+	while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null" || [ $(echo $BITCOMET_BT_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$PBH_WEBUI_PORT$|^$StunBindPort$") ] ; do
+		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
+	done
 	echo 启动 BitComet 后执行 NATMap | LOG
 	/files/BitComet/bin/bitcometd &
 	sleep 5
