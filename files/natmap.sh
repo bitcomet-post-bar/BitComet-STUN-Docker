@@ -35,4 +35,4 @@ echo $UpnpStart | LOG
 eval $UpnpStart))
 
 echo 更新 BitComet 监听端口 | LOG
-/files/BitComet/bin/bitcometd --bt_port $WANPORT &
+/files/BitComet/bin/bitcometd --bt_port $WANPORT & >/dev/null
