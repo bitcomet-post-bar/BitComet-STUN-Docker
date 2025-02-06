@@ -18,7 +18,7 @@ echo [$(date)] $WANADDR:$WANPORT '->' $OWNADDR:$LANPORT '->' $WANPORT >>/BitCome
 echo $WANPORT $LANPORT >/BitComet/DockerSTUNPORT
 
 echo 更新 BitComet 监听端口 | LOG
-/files/BitComet/bin/bitcometd --bt_port $WANPORT & >/dev/null
+/files/BitComet/bin/bitcometd --bt_port $WANPORT >/dev/null
 
 echo 更新 UPnP 规则 | LOG
 [ $UpnpInterface ] && export UpnpInterface='-m '$UpnpInterface''
