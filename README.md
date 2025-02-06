@@ -46,8 +46,6 @@ STUN 穿透需要锥形 NAT 环境及 网关开启 UPnP 功能。
 | StunHttpServer | 穿透通道保活用的 HTTP 服务器 | `qq.com` |
 | StunInterval | 穿透通道保活间隔（秒） | `25` |
 | StunInterface | NATMap 绑定接口或 IP<br>通常在策略分流时指定 | 不启用 |
-| StunForward | NATMap 转发开关 | 不启用 |
-| StunForwardAddr | NATMap 转发的目的地址（目的端口为 `StunHathPort`）<br>通常在策略分流时指定| `127.0.0.1` |
 | StunArgs | [NATMap 其他参数](https://github.com/heiher/natmap#how-to-use) | 无 |
 
 ### UPnP
