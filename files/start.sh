@@ -228,7 +228,7 @@ fi
 # 执行 NATMap 及 BitComet
 rm -f /BitComet/DockerSTUNPORT
 if [ "STUN" = 0 ]; then
-	echo 已禁用 STUN，直接执行 BitComet | LOG
+	echo 已禁用 STUN，直接启动 BitComet | LOG
 	/files/BitComet/bin/bitcometd &
 else
 	echo 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口 | LOG
@@ -236,8 +236,8 @@ else
 #	while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null" || [ $(echo $BITCOMET_BT_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$PBH_WEBUI_PORT$|^$StunBindPort$") ] ; do
 #		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 #	done
-	echo 执行 NATMap 后启动 BitComet | LOG
-	/files/BitComet/bin/bitcometd &
+	echo 启动 BitComet 后执行 NATMap | LOG
+	/files/BitComet/bin/bitcometd & && sleep 5
 	[ $StunServer ] || StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || StunHttpServer=qq.com
 	[ $StunInterval ] || StunInterval=25
@@ -254,7 +254,7 @@ if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
 	exec sh
 else
-	echo 60 秒后执行 PeerBanHelper | LOG
+	echo 60 秒后启动 PeerBanHelper | LOG
 	sleep 60
 	cd /PeerBanHelper
 	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
