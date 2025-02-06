@@ -200,8 +200,8 @@ else
 fi )
 
 # 初始化 BitComet BT 端口
-[ $BITCOMET_BT_PORT ] || \
-export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><')
+[ $BITCOMET_BT_PORT ] || (
+[ "STUN" = 0 ] || export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><'))
 if [ $BITCOMET_BT_PORT ]; then
 	if [ $(echo $BITCOMET_BT_PORT | grep -E '^[0-9]+$') ] && [ $BITCOMET_BT_PORT -le 65535 ]; then
 		[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
