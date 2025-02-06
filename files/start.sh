@@ -87,7 +87,7 @@ else
 	BC_WEBUI_PORT_FLAG=1
 fi
 [ $BC_WEBUI_PORT_FLAG ] && export BITCOMET_WEBUI_PORT=8080
-while (>/dev/tcp/127.0.0.1/$BITCOMET_WEBUI_PORT) 2>/dev/null; do
+while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_WEBUI_PORT) 2>/dev/null" || [ $(echo $BITCOMET_WEBUI_PORT | grep -E "^$BITCOMET_BT_PORT$|^$PBH_WEBUI_PORT$") ] ; do
 	export BITCOMET_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_WEBUI_PORT_SHUF=1
 done
@@ -141,7 +141,7 @@ else
 	PBH_PORT_FLAG=1
 fi
 [ $PBH_PORT_FLAG ] && export PBH_WEBUI_PORT=9898
-while (>/dev/tcp/127.0.0.1/$PBH_WEBUI_PORT) 2>/dev/null; do
+while bash -c "(>/dev/tcp/127.0.0.1/$PBH_WEBUI_PORT) 2>/dev/null" || [ $(echo $PBH_WEBUI_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$BITCOMET_BT_PORT$") ] ; do
 	export PBH_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	PBH_PORT_SHUF=1
 done
@@ -215,7 +215,7 @@ else
 	BC_BT_PORT_FLAG=1
 fi
 [ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=6082
-while (>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null; do
+while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null" || [ $(echo $BITCOMET_BT_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$PBH_WEBUI_PORT$") ] ; do
 	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_BT_PORT_SHUF=1
 done
@@ -232,17 +232,16 @@ if [ "STUN" = 0 ]; then
 	/files/BitComet/bin/bitcometd &
 else
 	echo 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口 | LOG
+	StunBindPort=$BITCOMET_BT_PORT
+	while bash -c "(>/dev/tcp/127.0.0.1/$BITCOMET_BT_PORT) 2>/dev/null" || [ $(echo $BITCOMET_BT_PORT | grep -E "^$BITCOMET_WEBUI_PORT$|^$PBH_WEBUI_PORT$|^$StunBindPort$") ] ; do
+		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
+	done
 	[ $StunServer ] || StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || StunHttpServer=qq.com
 	[ $StunInterval ] || StunInterval=25
 	[ $StunInterface ] && StunInterface='-i '$StunInterface''
 	[ $StunUdp ] && StunUdp='-u'
-	if [ $StunForward ]; then
-		[ $StunForwardAddr ] || StunForwardAddr=127.0.0.1
-		StunForward='-t 127.0.0.1 -p '$BITCOMET_BT_PORT''
-		echo 已启用 STUN 转发，目标为 127.0.0.1:$BITCOMET_BT_PORT
-	fi
-	NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$BITCOMET_BT_PORT' -k '$StunInterval' '$StunInterface' '$StunForward' '$StunUdp' -e /files/natmap.sh'
+	NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' '$StunUdp' -e /files/natmap.sh'
 	echo 本次 NATMap 执行命令
 	echo $NatmapStart
 	eval $NatmapStart
