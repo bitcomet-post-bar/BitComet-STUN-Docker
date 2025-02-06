@@ -17,6 +17,10 @@ touch /BitComet/DockerSTUN.log
 echo [$(date)] $WANADDR:$WANPORT '->' $OWNADDR:$LANPORT '->' $WANPORT >>/BitComet/DockerSTUN.log
 echo $WANPORT $LANPORT >/BitComet/DockerSTUNPORT
 
+echo 更新 BitComet 监听端口 | LOG
+/files/BitComet/bin/bitcometd --bt_port $WANPORT & >/dev/null
+
+echo 更新 UPnP 规则 | LOG
 [ $UpnpInterface ] && export UpnpInterface='-m '$UpnpInterface''
 [ $UpnpUrl ] && export UpnpUrl='-u '$UpnpUrl''
 [ $UpnpAddr ] || export UpnpAddr=@
@@ -33,6 +37,3 @@ UpnpStart='upnpc '$UpnpArgs' -m br-lan '$UpnpUrl' -i -e "STUN BitComet Docker" -
 echo 本次 UPnP 执行命令 | LOG
 echo $UpnpStart | LOG
 eval $UpnpStart))
-
-echo 更新 BitComet 监听端口 | LOG
-/files/BitComet/bin/bitcometd --bt_port $WANPORT & >/dev/null
