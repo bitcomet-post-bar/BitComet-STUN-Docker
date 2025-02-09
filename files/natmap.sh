@@ -9,6 +9,15 @@ OWNADDR=$6
 # 定义日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
 
+# 检测是否触发兼容模式
+rm /BitComet/DockerStunUpnpConflict 2>/dev/null && \
+if [ $2 = $(awk '{print$1}' /BitComet/DockerStunPort) ] && [ $4 = $(awk '{print$2}' /BitComet/DockerStunPort) ]; then
+	echo 穿透通道已保持，无需操作 | LOG
+	exit
+else
+	echo 穿透通道已变更，重新操作 | LOG
+fi
+
 echo 当前穿透通道为 $WANADDR:$WANPORT | LOG
 
 # 防止脚本重复运行
