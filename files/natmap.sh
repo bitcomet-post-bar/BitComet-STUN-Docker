@@ -76,12 +76,16 @@ if [ "$StunUpnp" != 0 ]; then
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
 		timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
 		if [ $? = 0 ]; then
-			echo 端口释放成功 | LOG
+			echo 端口释放成功，尝试更新 UPnP 规则 | LOG
 		else
-			echo 端口释放失败，仍继续尝试 | LOG
+			echo 端口释放失败，仍继续尝试更新 UPnP 规则 | LOG
 		fi
-		ADD_UPNP
 		kill $KEEPALIVE >/dev/null 2>&1
+		until [ $UPNP_FLAG = 0 ] || [ "$UpnpTry" = 5 ]; do
+			let UpnpTry++
+			echo UPnP 兼容模式第 $UpnpTry 次尝试，最多 5 次
+			ADD_UPNP
+		done
 		echo 重新执行 NATMap | LOG
 		eval $NatmapStart
 	fi
