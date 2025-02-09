@@ -239,7 +239,7 @@ GET_NAT() {
 		fi
 	done
 }
-if [ "STUN" != 0 ]; then
+if [ "$STUN" != 0 ]; then
 	echo 已启用 STUN，更新 STUN 服务器列表 | LOG
 	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /BitComet/DockerStunServers.txt; then
 		echo 更新 STUN 服务器列表成功 | LOG
@@ -302,7 +302,7 @@ if [ "STUN" != 0 ]; then
 		echo 检测 NAT 映射行为失败，本次跳过 | LOG
 	fi
 fi
-if [ "STUN" = 0 ]; then
+if [ "$STUN" = 0 ]; then
 	echo 已禁用 STUN，直接启动 BitComet | LOG
 	/files/BitComet/bin/bitcometd &
 else
