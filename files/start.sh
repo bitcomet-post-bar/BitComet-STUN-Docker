@@ -240,7 +240,7 @@ GET_NAT() {
 	done
 }
 if [ "STUN" != 0 ]; then
-	echo 已启用 STUN | LOG
+	echo 已启用 STUN，更新 STUN 服务器列表 | LOG
 	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /BitComet/DockerStunServers.txt; then
 		echo 更新 STUN 服务器列表成功 | LOG
 	else
