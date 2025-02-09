@@ -288,6 +288,7 @@ if [ "STUN" != 0 ]; then
 			else
 				echo 多次端口不同，当前网络为对称形 NAT | LOG
 				echo 自动禁用 STUN，请优化 NAT 类型后再尝试 | LOG
+				STUN=0
 			fi
 		fi
 		echo 检测结果如下 | LOG
