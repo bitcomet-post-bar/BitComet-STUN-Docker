@@ -231,7 +231,7 @@ GET_NAT() {
 	for SERVER in $1; do
 		IP=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
-		HEX=$(echo "000100002112a442$(cat /dev/urandom | head -c 12 | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
