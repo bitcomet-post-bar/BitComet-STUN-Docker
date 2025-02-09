@@ -70,7 +70,7 @@ if [ "$StunUpnp" != 0 ]; then
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
-			sleep 15
+			sleep 25
 		done) &
 		KEEPALIVE=$!
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
@@ -80,12 +80,13 @@ if [ "$StunUpnp" != 0 ]; then
 		else
 			echo 端口释放失败，仍继续尝试更新 UPnP 规则 | LOG
 		fi
-		kill $KEEPALIVE >/dev/null 2>&1
 		until [ $UPNP_FLAG = 0 ] || [ "$UpnpTry" = 5 ]; do
 			let UpnpTry++
 			echo UPnP 兼容模式第 $UpnpTry 次尝试，最多 5 次
 			ADD_UPNP
+			sleep 5
 		done
+		kill $KEEPALIVE >/dev/null 2>&1
 		echo 重新执行 NATMap | LOG
 		eval $NatmapStart
 	fi
