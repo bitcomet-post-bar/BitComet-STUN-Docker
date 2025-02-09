@@ -255,11 +255,11 @@ if [ "STUN" != 0 ]; then
 		echo 错误的 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
 		export StunMode=tcp
 	fi
-	if [[ $StunMode =~ nft ]]; then
-		if ! nft list tables >/dev/null 2>&1; then
-			echo 已指定 nftables 改包模式，但无 NET_ADMIN 权限；自动设置为传统模式 | LOG
-			[[ $StunMode =~ ^(nft|nfttcp)$ ]] && export StunMode=tcp
-			[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	if [[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1; then
+		echo 已指定 nftables 改包模式，但无 NET_ADMIN 权限；自动设置为传统模式 | LOG
+		[[ $StunMode =~ ^(nft|nfttcp)$ ]] && export StunMode=tcp
+		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	fi
 	[ $StunMode = tcp ] && echo 当前为 TCP 传统模式 | LOG && L4PROTO=tcp
 	[ $StunMode = udp ] && echo 当前为 UDP 传统模式 | LOG && L4PROTO=udp
 	[ $StunMode = nft ] && echo 当前为 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
@@ -340,8 +340,8 @@ if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
 	exec bash
 else
-	echo 60 秒后启动 PeerBanHelper | LOG
-	sleep 60
+	echo 120 秒后启动 PeerBanHelper | LOG
+	sleep 120
 	cd /PeerBanHelper
 	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
 fi
