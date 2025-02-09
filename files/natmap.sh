@@ -61,10 +61,10 @@ if [ "$StunUpnp" != 0 ]; then
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			echo "000100002112a442$(cat /dev/urandom | head -c 12 | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
-			sleep 25
+			sleep 15
 		done &
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
-		timeout 300 bash -c "while awk '{print$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
+		timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
 		if [ $? = 0 ]; then
 			echo 端口释放成功 | LOG
 		else
@@ -75,3 +75,5 @@ if [ "$StunUpnp" != 0 ]; then
 	[ $UPNP_FLAG = 1 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | head -1 | LOG
 	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | tail -1 | LOG
 fi
+
+exit 0
