@@ -53,8 +53,8 @@ if [ "$StunUpnp" != 0 ]; then
 	if [ $UPNP_FLAG = 2 ] && [[ $UpnpRes == *'ConflictWithOtherMechanisms'* ]]; then
 		echo 当前 IGD UPnP 设备启用了端口占用检测，尝试使用兼容模式 | LOG
 		>/BitComet/DockerStunUpnpConflict
-		[ $L4PROTO = tcp] && NatmapStart=$(ps x | grep 'natmap ' | grep -vE 'grep|-u' | grep -o "natmap.*-b $LANPORT.*")
-		[ $L4PROTO = udp] && NatmapStart=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
+		[ $L4PROTO = tcp ] && NatmapStart=$(ps x | grep 'natmap ' | grep -vE 'grep|-u' | grep -o "natmap.*-b $LANPORT.*")
+		[ $L4PROTO = udp ] && NatmapStart=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
 		echo 终止 NATMap 进程并等待端口释放，最大限时 300 秒 | LOG
 		kill $(ps x | grep "$NatmapStart" | grep -v grep | awk '{print$1}')
 		for SERVER in $(cat /BitComet/DockerStunServers.txt); do
