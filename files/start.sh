@@ -90,7 +90,7 @@ else
 	BC_WEBUI_PORT_FLAG=1
 fi
 [ $BC_WEBUI_PORT_FLAG ] && export BITCOMET_WEBUI_PORT=8080
-while bash -c "(>/dev/tcp/0.0.0.0/$BITCOMET_WEBUI_PORT) 2>/dev/null" || echo $BITCOMET_WEBUI_PORT | grep -qE '^'$BITCOMET_BT_PORT'$|^'$PBH_WEBUI_PORT'$' ; do
+while (>/dev/tcp/0.0.0.0/$BITCOMET_WEBUI_PORT) 2>/dev/null || echo $BITCOMET_WEBUI_PORT | grep -qE '^'$BITCOMET_BT_PORT'$|^'$PBH_WEBUI_PORT'$' ; do
 	export BITCOMET_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_WEBUI_PORT_SHUF=1
 done
@@ -143,7 +143,7 @@ else
 	PBH_PORT_FLAG=1
 fi
 [ $PBH_PORT_FLAG ] && export PBH_WEBUI_PORT=9898
-while bash -c "(>/dev/tcp/0.0.0.0/$PBH_WEBUI_PORT) 2>/dev/null" || echo $PBH_WEBUI_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$BITCOMET_BT_PORT'$' ; do
+while (>/dev/tcp/0.0.0.0/$PBH_WEBUI_PORT) 2>/dev/null || echo $PBH_WEBUI_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$BITCOMET_BT_PORT'$' ; do
 	export PBH_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	PBH_PORT_SHUF=1
 done
@@ -220,7 +220,11 @@ else
 	BC_BT_PORT_FLAG=1
 fi
 [ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=6082
-while bash -c "(>/dev/tcp/0.0.0.0/$BITCOMET_BT_PORT) 2>/dev/null" || echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$' ; do
+while \
+	echo | socat -T 1 - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	echo | socat -T 1 - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$'
+do
 	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_BT_PORT_SHUF=1
 done
@@ -231,19 +235,75 @@ else
 fi
 
 # 执行 NATMap 及 BitComet
-rm -f /BitComet/DockerSTUNPORT
+rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface
+GET_NAT() {
+	for SERVER in $1; do
+		IP=$(echo $SERVER | awk -F : '{print$1}')
+		PORT=$(echo $SERVER | awk -F : '{print$2}')
+		HEX=$(echo "000100002112a442$(cat /dev/urandom | head -c 12 | xxd -p)" | xxd -r -p | socat -T 2 - tcp4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		if [ $HEX ]; then
+			eval HEX$3=$HEX
+			eval SERVER$3=$SERVER
+			break
+		fi
+	done
+}
+if [ "STUN" != 0 ]; then
+	echo 已启用 STUN，更新 STUN 服务器列表 | LOG
+	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /BitComet/DockerStunServers.txt; then
+		echo 更新 STUN 服务器列表成功 | LOG
+	else
+		echo 更新 STUN 服务器列表失败，本次跳过 | LOG
+		[ ! -f /BitComet/DockerStunServers.txt ] && cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
+	fi
+	echo 检测 NAT 映射行为 | LOG
+	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
+	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
+	if [ $HEX1 ] && [ $HEX2 ]; then
+		if [ ${HEX1:12:4} = ${HEX2:12:4} ]; then
+			if [ $((0x${HEX1:12:4}^0x2112)) = $BITCOMET_BT_PORT ]; then
+				echo 内外端口一致，当前网络具备公网 IP | LOG
+				echo 自动禁用 STUN，请自行开放端口 | LOG
+				STUN=0
+			else
+				echo 两次端口一致，当前网络为锥形 NAT | LOG
+				echo 保持启用 STUN，请确保路由器开启 UPnP 功能 | LOG
+			fi
+		else
+			echo 两次端口不同，尝试两次额外检测 | LOG
+			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2)$")" $BITCOMET_BT_PORT 3
+			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2|$SERVER3)$")" $BITCOMET_BT_PORT 4
+			if [[ "${HEX3:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX4:12:4})$ ]] || [[ "${HEX4:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX3:12:4})$ ]]; then
+				echo 额外检测获得一致端口，请确认是否开启策略分流或透明代理等 | LOG
+				echo 保持启用 STUN，请确保路由器开启 UPnP 功能 | LOG
+			else
+				echo 多次端口不同，当前网络为对称形 NAT | LOG
+				echo 自动禁用 STUN，请优化 NAT 类型后再尝试 | LOG
+			fi
+		fi
+		echo 检测结果如下 | LOG
+		echo $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX1:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX1:12:4}^0x2112)) via $SERVER1 | LOG
+		echo $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX2:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX2:12:4}^0x2112)) via $SERVER2 | LOG
+		[ $HEX3 ] && \
+		echo $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX3:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX3:12:4}^0x2112)) via $SERVER3 | LOG
+		[ $HEX4 ] && \
+		echo $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX4:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX4:12:4}^0x2112)) via $SERVER4 | LOG
+	else
+		echo 检测 NAT 映射行为失败，本次跳过 | LOG
+	fi
+fi
 if [ "STUN" = 0 ]; then
 	echo 已禁用 STUN，直接启动 BitComet | LOG
 	/files/BitComet/bin/bitcometd &
 else
 	echo 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口 | LOG
 	StunBindPort=$BITCOMET_BT_PORT
-	while bash -c "(>/dev/tcp/0.0.0.0/$BITCOMET_BT_PORT) 2>/dev/null" || echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$|^'$StunBindPort'$' ; do
+	while (>/dev/tcp/0.0.0.0/$BITCOMET_BT_PORT) 2>/dev/null || echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$|^'$StunBindPort'$' ; do
 		export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 	done
 	echo 启动 BitComet 后执行 NATMap | LOG
 	/files/BitComet/bin/bitcometd &
-	sleep 5
+	sleep 3
 	[ $StunServer ] || StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || StunHttpServer=qq.com
 	[ $StunInterval ] || StunInterval=25
