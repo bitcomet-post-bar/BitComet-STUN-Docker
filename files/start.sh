@@ -4,6 +4,7 @@
 [ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 [ $BITCOMET_WEBUI_USERNAME ] && export WEBUI_USERNAME=$BITCOMET_WEBUI_USERNAME
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
+HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1)
 
 # 初始化日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
@@ -83,22 +84,19 @@ if [ $BITCOMET_WEBUI_PORT ]; then
 		BC_WEBUI_PORT_ORIG=$BITCOMET_WEBUI_PORT
 	else
 		echo BitComet WebUI 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
-		BC_WEBUI_PORT_FLAG=1
+		export BITCOMET_WEBUI_PORT=8080
 	fi
 else
 	echo BitComet WebUI 端口未指定，执行初始化 | LOG
-	BC_WEBUI_PORT_FLAG=1
+	export BITCOMET_WEBUI_PORT=8080
 fi
-[ $BC_WEBUI_PORT_FLAG ] && export BITCOMET_WEBUI_PORT=8080
 while (>/dev/tcp/0.0.0.0/$BITCOMET_WEBUI_PORT) 2>/dev/null || echo $BITCOMET_WEBUI_PORT | grep -qE '^'$BITCOMET_BT_PORT'$|^'$PBH_WEBUI_PORT'$' ; do
 	export BITCOMET_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_WEBUI_PORT_SHUF=1
 done
-if [ $BC_WEBUI_PORT_FLAG ] || [ ! $BC_WEBUI_PORT_SHUF ]; then
-	echo BitComet WebUI 当前地址为 http://${HOSTNAME}:$BITCOMET_WEBUI_PORT | LOG
-else
-	echo BitComet WebUI 端口 $BC_WEBUI_PORT_ORIG 被占用，当前地址为 http://${HOSTNAME}:$BITCOMET_WEBUI_PORT | LOG
-fi
+[ $BC_WEBUI_PORT_ORIG ] &&[ $BC_WEBUI_PORT_SHUF ] && echo BitComet WebUI 端口 $BC_WEBUI_PORT_ORIG 被占用，已重新分配 | LOG
+echo BitComet WebUI 使用以下地址访问 | LOG
+for IP in $HOSTIP; do echo http://$IP:$BITCOMET_WEBUI_PORT | LOG; done
 
 # 初始化 PeerBanHelper 配置文件
 PBH_CFG=/PeerBanHelper/data/config/config.yml
@@ -136,22 +134,19 @@ if [ $PBH_WEBUI_PORT ]; then
 		PBH_PORT_ORIG=$PBH_WEBUI_PORT
 	else
 		echo PeerBanHelper WebUI 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
-		PBH_PORT_FLAG=1
+		export PBH_WEBUI_PORT=9898
 	fi
 else
 	echo PeerBanHelper WebUI 端口未指定，执行初始化 | LOG
-	PBH_PORT_FLAG=1
+	export PBH_WEBUI_PORT=9898
 fi
-[ $PBH_PORT_FLAG ] && export PBH_WEBUI_PORT=9898
 while (>/dev/tcp/0.0.0.0/$PBH_WEBUI_PORT) 2>/dev/null || echo $PBH_WEBUI_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$BITCOMET_BT_PORT'$' ; do
 	export PBH_WEBUI_PORT=$(shuf -i 1024-65535 -n 1)
 	PBH_PORT_SHUF=1
 done
-if [ $PBH_PORT_FLAG ] || [ ! $PBH_PORT_SHUF ]; then
-	echo PeerBanHelper WebUI 当前地址为 http://${HOSTNAME}:$PBH_WEBUI_PORT | LOG
-else
-	echo PeerBanHelper WebUI 端口 $PBH_PORT_ORIG 被占用，当前地址为 http://${HOSTNAME}:$PBH_WEBUI_PORT | LOG
-fi
+[ $PBH_PORT_ORIG ] && [ $PBH_PORT_SHUF ] && echo PeerBanHelper WebUI 端口 $PBH_PORT_ORIG 被占用，已重新分配 | LOG
+echo PeerBanHelper WebUI 使用以下地址访问 | LOG
+for IP in $HOSTIP; do echo http://$IP:$PBH_WEBUI_PORT | LOG; done
 [ $PBH_WEBUI_PORT != "$PBH_PORT_ORIG" ] && \
 if [ "$(sed -n '/^server:/,/^[^ ]/{/^ \+http:/p}' $PBH_CFG)" ]; then
 	sed '/^server:/,/^[^ ]/{/^ \+http:/{s/http:.*/http: '$PBH_WEBUI_PORT'/}}' -i $PBH_CFG
@@ -213,13 +208,12 @@ if [ $BITCOMET_BT_PORT ]; then
 		BC_BT_PORT_ORIG=$BITCOMET_BT_PORT
 	else
 		echo BitComet BT 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
-		BC_BT_PORT_FLAG=1
+		export BITCOMET_BT_PORT=6082
 	fi
 else
 	echo BitComet BT 端口未指定，执行初始化 | LOG
-	BC_BT_PORT_FLAG=1
+	export BITCOMET_BT_PORT=6082
 fi
-[ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=6082
 while \
 	echo | socat -T 1 - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
 	echo | socat -T 1 - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
@@ -228,11 +222,8 @@ do
 	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 	BC_BT_PORT_SHUF=1
 done
-if [ $BC_BT_PORT_FLAG ] || [ ! $BC_BT_PORT_SHUF ]; then
-	echo BitComet 当前 BT 端口为 $BITCOMET_BT_PORT | LOG
-else
-	echo BitComet BT 端口 $BC_BT_PORT_ORIG 被占用，当前端口为 $BITCOMET_BT_PORT | LOG
-fi
+[ $BC_BT_PORT_ORIG ] && [ $BC_BT_PORT_SHUF ] && echo BitComet BT 端口 $BC_BT_PORT_ORIG 被占用，已重新分配 | LOG
+echo BitComet BT 端口当前为 $BITCOMET_BT_PORT | LOG
 
 # 执行 NATMap 及 BitComet
 rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface
@@ -240,7 +231,7 @@ GET_NAT() {
 	for SERVER in $1; do
 		IP=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
-		HEX=$(echo "000100002112a442$(cat /dev/urandom | head -c 12 | xxd -p)" | xxd -r -p | socat -T 2 - tcp4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		HEX=$(echo "000100002112a442$(cat /dev/urandom | head -c 12 | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
@@ -249,13 +240,31 @@ GET_NAT() {
 	done
 }
 if [ "STUN" != 0 ]; then
-	echo 已启用 STUN，更新 STUN 服务器列表 | LOG
+	echo 已启用 STUN | LOG
 	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /BitComet/DockerStunServers.txt; then
 		echo 更新 STUN 服务器列表成功 | LOG
 	else
 		echo 更新 STUN 服务器列表失败，本次跳过 | LOG
 		[ ! -f /BitComet/DockerStunServers.txt ] && cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
 	fi
+	if [ ! $StunMode ]; then
+		echo 未指定 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
+		export StunMode=tcp
+	fi
+	if [[ ! "$StunMode" =~ ^(tcp|udp|nft|nfttcp|nftudp)$ ]]; then
+		echo 错误的 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
+		export StunMode=tcp
+	fi
+	if [[ $StunMode =~ nft ]]; then
+		if ! nft list tables >/dev/null 2>&1; then
+			echo 已指定 nftables 改包模式，但无 NET_ADMIN 权限；自动设置为传统模式 | LOG
+			[[ $StunMode =~ ^(nft|nfttcp)$ ]] && export StunMode=tcp
+			[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	[ $StunMode = tcp ] && echo 当前为 TCP 传统模式 | LOG && L4PROTO=tcp
+	[ $StunMode = udp ] && echo 当前为 UDP 传统模式 | LOG && L4PROTO=udp
+	[ $StunMode = nft ] && echo 当前为 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
+	[ $StunMode = nfttcp ] && echo 当前为 TCP 改包模式 | LOG && L4PROTO=tcp
+	[ $StunMode = nftudp ] && echo 当前为 UDP 改包模式 | LOG && L4PROTO=udp
 	echo 检测 NAT 映射行为 | LOG
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
@@ -267,15 +276,15 @@ if [ "STUN" != 0 ]; then
 				STUN=0
 			else
 				echo 两次端口一致，当前网络为锥形 NAT | LOG
-				echo 保持启用 STUN，请确保路由器开启 UPnP 功能 | LOG
+				echo 保持启用 STUN | LOG
 			fi
 		else
-			echo 两次端口不同，尝试两次额外检测 | LOG
+			echo 两次端口不同，额外检测两次 | LOG
 			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2)$")" $BITCOMET_BT_PORT 3
 			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2|$SERVER3)$")" $BITCOMET_BT_PORT 4
 			if [[ "${HEX3:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX4:12:4})$ ]] || [[ "${HEX4:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX3:12:4})$ ]]; then
 				echo 额外检测获得一致端口，请确认是否开启策略分流或透明代理等 | LOG
-				echo 保持启用 STUN，请确保路由器开启 UPnP 功能 | LOG
+				echo 保持启用 STUN | LOG
 			else
 				echo 多次端口不同，当前网络为对称形 NAT | LOG
 				echo 自动禁用 STUN，请优化 NAT 类型后再尝试 | LOG
@@ -304,21 +313,32 @@ else
 	echo 启动 BitComet 后执行 NATMap | LOG
 	/files/BitComet/bin/bitcometd &
 	sleep 3
-	[ $StunServer ] || StunServer=turn.cloudflare.com
-	[ $StunHttpServer ] || StunHttpServer=qq.com
-	[ $StunInterval ] || StunInterval=25
-	[ $StunInterface ] && StunInterface='-i '$StunInterface''
-	[ $StunUdp ] && StunUdp='-u'
-	NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' '$StunUdp' -e /files/natmap.sh'
+	[ $StunServer ] || export StunServer=turn.cloudflare.com
+	[ $StunHttpServer ] || export StunHttpServer=qq.com
+	[ $StunInterval ] || export StunInterval=25
+	[ $StunInterface ] && export StunInterface='-i '$StunInterface''
 	echo 本次 NATMap 执行命令
-	echo $NatmapStart
-	eval $NatmapStart
+	if [ $StunMode = nft ]; then
+		NatmapStartTcp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
+		NatmapStartUdp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
+		echo $NatmapStartTcp
+		echo $NatmapStartUdp
+		eval $NatmapStartTcp
+		eval $NatmapStartUdp
+	else
+		[[ $StunMode =~ tcp ]] && \
+		NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
+		[[ $StunMode =~ udp ]] && \
+		NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
+		echo $NatmapStart
+		eval $NatmapStart
+	fi
 fi
 
 # 执行 PeerBanHelper
 if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
-	exec sh
+	exec bash
 else
 	echo 60 秒后启动 PeerBanHelper | LOG
 	sleep 60
