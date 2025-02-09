@@ -9,6 +9,15 @@ OWNADDR=$6
 # 定义日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
 
+# 检测是否触发兼容模式
+rm /BitComet/DockerStunUpnpConflict 2>/dev/null && \
+if [ $2 = $(awk '{print$1}' /BitComet/DockerStunPort) ] && [ $4 = $(awk '{print$2}' /BitComet/DockerStunPort) ]; then
+	echo 穿透通道已保持，无需操作 | LOG
+	exit
+else
+	echo 穿透通道已变更，重新操作 | LOG
+fi
+
 echo 当前穿透通道为 $WANADDR:$WANPORT | LOG
 
 # 防止脚本重复运行
@@ -61,22 +70,28 @@ if [ "$StunUpnp" != 0 ]; then
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
-			sleep 15
+			sleep 25
 		done) &
 		KEEPALIVE=$!
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
 		timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
 		if [ $? = 0 ]; then
-			echo 端口释放成功 | LOG
+			echo 端口释放成功，尝试更新 UPnP 规则 | LOG
 		else
-			echo 端口释放失败，仍尝试添加 UPnP 规则 | LOG
+			echo 端口释放失败，仍继续尝试更新 UPnP 规则 | LOG
 		fi
-		ADD_UPNP
+		until [ $UPNP_FLAG = 0 ] || [ "$UpnpTry" = 5 ]; do
+			let UpnpTry++
+			echo UPnP 兼容模式第 $UpnpTry 次尝试，最多 5 次
+			ADD_UPNP
+			[ $UPNP_FLAG = 0 ] || [ $UpnpTry = 5 ] || sleep 15
+		done
+		kill $KEEPALIVE >/dev/null 2>&1
+		echo 重新执行 NATMap | LOG
 		eval $NatmapStart
 	fi
 	[ $UPNP_FLAG = 1 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | head -1 | LOG
 	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | tail -1 | LOG
 fi
 
-kill $KEEPALIVE >/dev/null 2>&1
-exit 0
+# exit 0

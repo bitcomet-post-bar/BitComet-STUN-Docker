@@ -226,12 +226,18 @@ done
 echo BitComet BT 端口当前为 $BITCOMET_BT_PORT | LOG
 
 # 执行 NATMap 及 BitComet
-rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface
+rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict
 GET_NAT() {
+	[ $StunInterface ] && \
+	if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
+		local StunInterface=',bind='$StunInterface''
+	else
+		local StunInterface=',interface='$StunInterface''
+	fi
 	for SERVER in $1; do
 		IP=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
-		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
@@ -245,7 +251,7 @@ if [ "$STUN" != 0 ]; then
 		echo 更新 STUN 服务器列表成功 | LOG
 	else
 		echo 更新 STUN 服务器列表失败，本次跳过 | LOG
-		[ ! -f /BitComet/DockerStunServers.txt ] && cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
+		[ -f /BitComet/DockerStunServers.txt ] || cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
 	fi
 	if [ ! $StunMode ]; then
 		echo 未指定 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
