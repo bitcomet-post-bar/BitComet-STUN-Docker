@@ -215,8 +215,8 @@ else
 	export BITCOMET_BT_PORT=6082
 fi
 while \
-	echo | socat -T 1 - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
-	echo | socat -T 1 - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	echo | timeout 1 socat - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	echo | timeout 1 socat - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
 	echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$'
 do
 	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
@@ -231,7 +231,7 @@ GET_NAT() {
 	for SERVER in $1; do
 		IP=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
-		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
@@ -273,7 +273,7 @@ if [ "STUN" != 0 ]; then
 			if [ $((0x${HEX1:12:4}^0x2112)) = $BITCOMET_BT_PORT ]; then
 				echo 内外端口一致，当前网络具备公网 IP | LOG
 				echo 自动禁用 STUN，请自行开放端口 | LOG
-				STUN=0
+				export STUN=0
 			else
 				echo 两次端口一致，当前网络为锥形 NAT | LOG
 				echo 保持启用 STUN | LOG
@@ -288,7 +288,7 @@ if [ "STUN" != 0 ]; then
 			else
 				echo 多次端口不同，当前网络为对称形 NAT | LOG
 				echo 自动禁用 STUN，请优化 NAT 类型后再尝试 | LOG
-				STUN=0
+				export STUN=0
 			fi
 		fi
 		echo 检测结果如下 | LOG
@@ -341,8 +341,8 @@ if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
 	exec bash
 else
-	echo 120 秒后启动 PeerBanHelper | LOG
-	sleep 120
+	echo 已启用 PeerBanHelper，60 秒后启动 | LOG
+	sleep 60
 	cd /PeerBanHelper
 	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
 fi
