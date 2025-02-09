@@ -57,12 +57,13 @@ if [ "$StunUpnp" != 0 ]; then
 		[ $L4PROTO = udp ] && NatmapStart=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
 		echo 终止 NATMap 进程并等待端口释放，最大限时 300 秒 | LOG
 		kill $(ps x | grep "$NatmapStart" | grep -v grep | awk '{print$1}')
-		for SERVER in $(cat /BitComet/DockerStunServers.txt); do
+		(for SERVER in $(cat /BitComet/DockerStunServers.txt); do
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
-			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | socat -T 2 - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
+			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
 			sleep 15
-		done &
+		done) &
+		KEEPALIVE=$!
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
 		timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
 		if [ $? = 0 ]; then
@@ -77,4 +78,5 @@ if [ "$StunUpnp" != 0 ]; then
 	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | tail -1 | LOG
 fi
 
+kill $KEEPALIVE >/dev/null 2>&1
 exit 0
