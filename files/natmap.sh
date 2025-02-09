@@ -84,7 +84,7 @@ if [ "$StunUpnp" != 0 ]; then
 			let UpnpTry++
 			echo UPnP 兼容模式第 $UpnpTry 次尝试，最多 5 次
 			ADD_UPNP
-			sleep 5
+			[ $UPNP_FLAG = 0 ] || [ $UpnpTry = 5 ] || sleep 15
 		done
 		kill $KEEPALIVE >/dev/null 2>&1
 		echo 重新执行 NATMap | LOG
