@@ -10,7 +10,10 @@ ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin" \
     LANG=C.UTF-8
 RUN chmod +x /files/* && \
     apt-get update && \
-    apt-get install -y miniupnpc nftables xxd socat && \
+#   apt-get install -y miniupnpc nftables socat busybox && \
+#   ln -s /bin/busybox /usr/bin/xxd && \
+#   ln -s /bin/busybox /usr/bin/wget && \
+    apt-get install -y miniupnpc nftables socat xxd wget && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
