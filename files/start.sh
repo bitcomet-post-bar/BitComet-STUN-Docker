@@ -226,7 +226,7 @@ done
 echo BitComet BT 端口当前为 $BITCOMET_BT_PORT | LOG
 
 # 执行 NATMap 及 BitComet
-rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface
+rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict
 GET_NAT() {
 	[ $StunInterface ] && \
 	if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
