@@ -71,9 +71,10 @@ if [ "$StunUpnp" != 0 ]; then
 		else
 			echo 端口释放失败，仍继续尝试 | LOG
 		fi
+		ADD_UPNP
 		kill $KEEPALIVE >/dev/null 2>&1
-		echo 重新执行 NATMap 并添加 UPnP 规则 | LOG
-		exec $NatmapStart
+		echo 重新执行 NATMap | LOG
+		eval $NatmapStart
 	fi
 	[ $UPNP_FLAG = 1 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | head -1 | LOG
 	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | tail -1 | LOG
