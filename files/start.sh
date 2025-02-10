@@ -212,7 +212,7 @@ if [ "$STUN" != 0 ]; then
 		[ -f /BitComet/DockerStunServers.txt ] || cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
 	fi
 	[ $StunMode ] || echo 未指定 STUN 穿透模式，自动设置 | LOG
-	if [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]]; then
+	if [ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]]; then
 		echo 错误的 STUN 穿透模式，重新设置 | LOG
 		export StunMode=
 	fi
@@ -282,6 +282,10 @@ GET_NAT() {
 }
 if [ "$STUN" != 0 ]; then
 	echo 检测 NAT 映射行为 | LOG
+	if ls /sys/class/net | grep -q $StunInterface; then
+		echo STUN 绑定端口不存在，已忽略 | LOG
+		export StunInterface=
+	fi
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
