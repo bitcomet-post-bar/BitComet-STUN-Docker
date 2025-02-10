@@ -4,7 +4,7 @@
 [ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 [ $BITCOMET_WEBUI_USERNAME ] && export WEBUI_USERNAME=$BITCOMET_WEBUI_USERNAME
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
-HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1)
+HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 | sort | uniq)
 
 # 初始化日志函数
 LOG() { tee -a /BitComet/DockerLogs.log ;}
@@ -200,8 +200,44 @@ if ! sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/endpoint
 	fi
 fi
 
+# 初始化 STUN
+rm -f /BitComet/DockerStunPort* /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict*
+if [ "$STUN" != 0 ]; then
+	echo 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒 | LOG
+	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /tmp/DockerStunServers.txt; then
+		echo 更新 STUN 服务器列表成功 | LOG
+		mv -f /tmp/DockerStunServers.txt /BitComet/DockerStunServers.txt
+	else
+		echo 更新 STUN 服务器列表失败，本次跳过 | LOG
+		[ -f /BitComet/DockerStunServers.txt ] || cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
+	fi
+	[ $StunMode ] || echo 未指定 STUN 穿透模式，自动设置 | LOG
+	if [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]]; then
+		echo 错误的 STUN 穿透模式，重新设置 | LOG
+		export StunMode=
+	fi
+	[ $StunMode ] || \
+	if nft list tables >/dev/null 2>&1; then
+		echo 已开启 NET_ADMIN 权限，使用 TCP 改包模式 | LOG
+		export StunMode=nfttcp
+	else
+		echo 未开启 NET_ADMIN 权限，使用 TCP 传统模式 | LOG
+		export StunMode=tcp
+	fi
+	if [[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1; then
+		echo 已指定 nftables 改包模式，但未开启 NET_ADMIN 权限；自动设置为传统模式 | LOG
+		[[ $StunMode =~ ^nftudp$ ]] || export StunMode=tcp
+		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	fi
+	[ $StunMode = tcp ] && echo 当前使用 TCP 传统模式 | LOG && L4PROTO=tcp
+	[ $StunMode = udp ] && echo 当前使用 UDP 传统模式 | LOG && L4PROTO=udp
+	[ $StunMode = nfttcp ] && echo 当前使用 TCP 改包模式 | LOG && L4PROTO=tcp
+	[ $StunMode = nftudp ] && echo 当前使用 UDP 改包模式 | LOG && L4PROTO=udp
+	[ $StunMode = nftboth ] && echo 当前使用 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
+fi
+
 # 初始化 BitComet BT 端口
-[ $BITCOMET_BT_PORT ] || ([ "STUN" = 0 ] || export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><'))
+[ $BITCOMET_BT_PORT ] || [[ "$StunMode" =~ ^(tcp|udp)$ ]] || export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><')
 if [ $BITCOMET_BT_PORT ]; then
 	if [[ $BITCOMET_BT_PORT =~ ^[0-9]+$ ]] && [ $BITCOMET_BT_PORT -le 65535 ]; then
 		[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
@@ -225,8 +261,7 @@ done
 [ $BC_BT_PORT_ORIG ] && [ $BC_BT_PORT_SHUF ] && echo BitComet BT 端口 $BC_BT_PORT_ORIG 被占用，已重新分配 | LOG
 echo BitComet BT 端口当前为 $BITCOMET_BT_PORT | LOG
 
-# 执行 NATMap 及 BitComet
-rm -f /BitComet/DockerStunPort /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict
+# 检测 NAT 映射行为
 GET_NAT() {
 	[ $StunInterface ] && \
 	if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
@@ -246,31 +281,6 @@ GET_NAT() {
 	done
 }
 if [ "$STUN" != 0 ]; then
-	echo 已启用 STUN，更新 STUN 服务器列表 | LOG
-	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /BitComet/DockerStunServers.txt; then
-		echo 更新 STUN 服务器列表成功 | LOG
-	else
-		echo 更新 STUN 服务器列表失败，本次跳过 | LOG
-		[ -f /BitComet/DockerStunServers.txt ] || cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
-	fi
-	if [ ! $StunMode ]; then
-		echo 未指定 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
-		export StunMode=tcp
-	fi
-	if [[ ! "$StunMode" =~ ^(tcp|udp|nft|nfttcp|nftudp)$ ]]; then
-		echo 错误的 STUN 穿透模式，默认使用 TCP 传统模式 | LOG
-		export StunMode=tcp
-	fi
-	if [[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1; then
-		echo 已指定 nftables 改包模式，但无 NET_ADMIN 权限；自动设置为传统模式 | LOG
-		[[ $StunMode =~ ^(nft|nfttcp)$ ]] && export StunMode=tcp
-		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
-	fi
-	[ $StunMode = tcp ] && echo 当前为 TCP 传统模式 | LOG && L4PROTO=tcp
-	[ $StunMode = udp ] && echo 当前为 UDP 传统模式 | LOG && L4PROTO=udp
-	[ $StunMode = nft ] && echo 当前为 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
-	[ $StunMode = nfttcp ] && echo 当前为 TCP 改包模式 | LOG && L4PROTO=tcp
-	[ $StunMode = nftudp ] && echo 当前为 UDP 改包模式 | LOG && L4PROTO=udp
 	echo 检测 NAT 映射行为 | LOG
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
@@ -308,6 +318,8 @@ if [ "$STUN" != 0 ]; then
 		echo 检测 NAT 映射行为失败，本次跳过 | LOG
 	fi
 fi
+
+# 执行 NATMap 及 BitComet
 if [ "$STUN" = 0 ]; then
 	echo 已禁用 STUN，直接启动 BitComet | LOG
 	/files/BitComet/bin/bitcometd &
@@ -325,7 +337,7 @@ else
 	[ $StunInterval ] || export StunInterval=25
 	[ $StunInterface ] && export StunInterface='-i '$StunInterface''
 	echo 本次 NATMap 执行命令
-	if [ $StunMode = nft ]; then
+	if [ $StunMode = nftboth ]; then
 		NatmapStartTcp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
 		NatmapStartUdp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
 		echo $NatmapStartTcp
