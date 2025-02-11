@@ -286,7 +286,7 @@ GET_NAT() {
 }
 [ "$STUN" = 0 ] || {
 	echo 检测 NAT 映射行为 | LOG
-	[ $(ls /sys/class/net | grep ^$StunInterface$) ] || {
+	[ $StunInterface ] && [ ! $(ls /sys/class/net | grep ^$StunInterface$) ] && {
 		echo STUN 绑定端口不存在，已忽略 | LOG
 		unset StunInterface
 	}
@@ -349,19 +349,19 @@ else
 	[ $StunInterface ] && export StunInterface='-i '$StunInterface''
 	echo 本次 NATMap 执行命令
 	if [ $StunMode = nftboth ]; then
-		NatmapStartTcp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
-		NatmapStartUdp='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
-		echo $NatmapStartTcp
-		echo $NatmapStartUdp
-		eval $NatmapStartTcp
-		eval $NatmapStartUdp
+		STUN_START_TCP='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
+		STUN_START_UDP='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
+		echo $STUN_START_TCP
+		echo $STUN_START_UDP
+		eval $STUN_START_TCP
+		eval $STUN_START_UDP
 	else
 		[[ $StunMode =~ tcp ]] && \
-		NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
+		STUN_START='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
 		[[ $StunMode =~ udp ]] && \
-		NatmapStart='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
-		echo $NatmapStart
-		eval $NatmapStart
+		STUN_START='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
+		echo $STUN_START
+		eval $STUN_START
 	fi
 fi
 
