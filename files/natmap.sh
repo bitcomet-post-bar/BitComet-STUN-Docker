@@ -83,7 +83,7 @@ echo $WANPORT $LANPORT >/BitComet/DockerStunPort_$L4PROTO
 			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
 			sleep 25
 		done &
-		KEEPALIVE_PID=$!
+		UPNP_KEEPALIVE_PID=$!
 		# sleep $(expr $(awk '{print$2,$6}' /proc/net/$L4PROTO | grep -i ":$(printf '%04x' $LANPORT)" | awk -F : '{print$3}' | awk '{printf"%d\n",strtonum("0x"$0),$0}' | sort -n | tail -1) / $(getconf CLK_TCK))
 		timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
 		if [ $? = 0 ]; then
@@ -97,7 +97,7 @@ echo $WANPORT $LANPORT >/BitComet/DockerStunPort_$L4PROTO
 			ADD_UPNP
 			[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
 		done
-		kill $KEEPALIVE_PID >/dev/null 2>&1
+		kill $UPNP_KEEPALIVE_PID >/dev/null 2>&1
 		echo 重新执行 NATMap | LOG
 		eval $STUN_START
 	}
