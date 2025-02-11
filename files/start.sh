@@ -204,7 +204,10 @@ PBH_CLIENT_SPACE=$(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG 
 rm -f /BitComet/DockerStunPort* /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict*
 [ "$STUN" = 0 ] || {
 	echo 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒 | LOG
-	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /tmp/DockerStunServers.txt; then
+	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/DockerStunServers.txt
+	# wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /tmp/DockerStunServers.txt
+	if [ -s /tmp/DockerStunServers.txt ]; then
 		echo 更新 STUN 服务器列表成功 | LOG
 		mv -f /tmp/DockerStunServers.txt /BitComet/DockerStunServers.txt
 	else
