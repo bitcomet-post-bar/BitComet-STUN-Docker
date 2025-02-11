@@ -368,11 +368,11 @@ fi
 # 执行 PeerBanHelper
 if [ "$PBH" = 0 ]; then
 	echo 已禁用 PeerBanHelper | LOG
-	exec bash
+	exec sleep infinity
 else
 	echo 已启用 PeerBanHelper，60 秒后启动 | LOG
 	sleep 60
 	cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar &
-	exec bash
+	exec sleep infinity
 fi
