@@ -279,7 +279,7 @@ GET_NAT() {
 			eval SERVER$3=$SERVER
 			break
 		else
-			STUN 服务器 $SERVER 不可用，后续排除 | LOG
+			echo STUN 服务器 $SERVER 不可用，后续排除 | LOG
 			sed '/^'$SERVER'$/d' -i /tmp/DockerStunServers.txt
 		fi
 	done
@@ -373,5 +373,6 @@ else
 	echo 已启用 PeerBanHelper，60 秒后启动 | LOG
 	sleep 60
 	cd /PeerBanHelper
-	exec java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar
+	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar &
+	exec bash
 fi
