@@ -263,21 +263,25 @@ echo BitComet BT 端口当前为 $BITCOMET_BT_PORT | LOG
 
 # 检测 NAT 映射行为
 GET_NAT() {
+	echo 使用 $1/$L4PROTO 进行第 $2 次绑定请求 | LOG
 	[ $StunInterface ] && \
 	if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
 		local StunInterface=',bind='$StunInterface''
 	else
 		local StunInterface=',interface='$StunInterface''
 	fi
-	for SERVER in $1; do
+	for SERVER in $(sort -R /tmp/DockerStunServers.txt); do
 		local IP=$(echo $SERVER | awk -F : '{print$1}')
 		local PORT=$(echo $SERVER | awk -F : '{print$2}')
-		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
-		[ $HEX ] && {
+		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		if [ $HEX ]; then
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
 			break
-		}
+		else
+			STUN 服务器 $SERVER 不可用，后续排除 | LOG
+			sed '/^'$SERVER'$/d' -i /tmp/DockerStunServers.txt
+		fi
 	done
 }
 [ "$STUN" = 0 ] || {
@@ -286,9 +290,11 @@ GET_NAT() {
 		echo STUN 绑定端口不存在，已忽略 | LOG
 		unset StunInterface
 	}
-	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
+	cp -f /BitComet/DockerStunServers.txt /tmp/DockerStunServers.txt
+	echo 已获取 $(wc -l < /tmp/DockerStunServers.txt) 个 STUN 服务器 | LOG
+	GET_NAT $BITCOMET_BT_PORT 1
 	[ $SERVER1 ] && \
-	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
+	GET_NAT $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
 		if [ ${HEX1:12:4} = ${HEX2:12:4} ]; then
 			if [ $((0x${HEX1:12:4}^0x2112)) = $BITCOMET_BT_PORT ]; then
@@ -301,8 +307,8 @@ GET_NAT() {
 			fi
 		else
 			echo 两次端口不同，额外检测两次 | LOG
-			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2)$")" $BITCOMET_BT_PORT 3
-			GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -vE "^($SERVER1|$SERVER2|$SERVER3)$")" $BITCOMET_BT_PORT 4
+			GET_NAT $BITCOMET_BT_PORT 3
+			GET_NAT $BITCOMET_BT_PORT 4
 			if [[ "${HEX3:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX4:12:4})$ ]] || [[ "${HEX4:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX3:12:4})$ ]]; then
 				echo 额外检测获得一致端口，请确认是否开启策略分流或透明代理等 | LOG
 				echo 保持启用 STUN | LOG
