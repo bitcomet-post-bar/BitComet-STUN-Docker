@@ -270,9 +270,9 @@ GET_NAT() {
 		local StunInterface=',interface='$StunInterface''
 	fi
 	for SERVER in $1; do
-		IP=$(echo $SERVER | awk -F : '{print$1}')
-		PORT=$(echo $SERVER | awk -F : '{print$2}')
-		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		local IP=$(echo $SERVER | awk -F : '{print$1}')
+		local PORT=$(echo $SERVER | awk -F : '{print$2}')
+		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		[ $HEX ] && {
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
@@ -287,6 +287,7 @@ GET_NAT() {
 		unset StunInterface
 	}
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
+	[ $SERVER1 ] && \
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
 		if [ ${HEX1:12:4} = ${HEX2:12:4} ]; then
