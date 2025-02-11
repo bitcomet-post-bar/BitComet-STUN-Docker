@@ -60,7 +60,7 @@ echo $WANPORT $LANPORT >/BitComet/DockerStunPort_$L4PROTO
 	UPNP_EXPORT=$LANPORT
 	[[ $StunMode =~ ^(tcp|udp)$ ]] && UPNP_INPORT=$WANPORT
 	[[ $StunMode =~ nft ]] && UPNP_INPORT=$LANPORT
-	echo 本次 UPnP 规则：转发 外部端口 $UPNP_EXPORT 至 内部端口 $UPNP_INPORT | LOG
+	echo 本次 UPnP 规则：转发 外部端口 $UPNP_EXPORT/$L4PROTO 至 内部端口 $UPNP_INPORT/$L4PROTO | LOG
 	ADD_UPNP
 	[ $UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && [ "$StunUpnpInterface" != '-m br-lan' ] && \
 	[ $(ls /sys/class/net | grep ^br-lan$) ] && {
