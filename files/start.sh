@@ -275,8 +275,8 @@ GET_NAT() {
 		local PORT=$(echo $SERVER | awk -F : '{print$2}')
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
-			eval HEX$3=$HEX
-			eval SERVER$3=$SERVER
+			eval HEX$2=$HEX
+			eval SERVER$2=$SERVER
 			break
 		else
 			echo STUN 服务器 $SERVER 不可用，后续排除 | LOG
@@ -293,7 +293,7 @@ GET_NAT() {
 	cp -f /BitComet/DockerStunServers.txt /tmp/DockerStunServers.txt
 	echo 已获取 $(wc -l < /tmp/DockerStunServers.txt) 个 STUN 服务器 | LOG
 	GET_NAT $BITCOMET_BT_PORT 1
-	[ $SERVER1 ] && \
+	[ $HEX1 ] && \
 	GET_NAT $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
 		if [ ${HEX1:12:4} = ${HEX2:12:4} ]; then
