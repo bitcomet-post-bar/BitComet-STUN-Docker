@@ -31,41 +31,52 @@ touch /BitComet/DockerStun.log
 echo [$(date)] $WANADDR:$WANPORT '->' $OWNADDR:$LANPORT '->' $WANPORT >>/BitComet/DockerStun.log
 echo $WANPORT $LANPORT >/BitComet/DockerStunPort_$L4PROTO
 
-echo 更新 BitComet 监听端口 | LOG
-/files/BitComet/bin/bitcometd --bt_port $WANPORT >/dev/null
+[[ $StunMode =~ ^(tcp|udp)$ ]] && {
+	echo 当前为传统模式，更新 BitComet 监听端口 | LOG
+	/files/BitComet/bin/bitcometd --bt_port $WANPORT >/dev/null
+}
+
+[[ $StunMode =~ nft ]] && {
+	echo 当前为改包模式，更新 nftables 规则 | LOG
+}
 
 # UPnP
 [ "$StunUpnp" = 0 ] || {
 	echo 已启用 UPnP | LOG
 	ADD_UPNP() {
-		[ $UpnpInterface ] && local UpnpInterface='-m '$UpnpInterface''
-		[ $UpnpUrl ] && local UpnpUrl='-u '$UpnpUrl''
-		[ $UpnpAddr ] || local UpnpAddr=@
-		UpnpStart='upnpc '$UpnpArgs' '$UpnpInterface' '$UpnpUrl' -i -e "STUN BitComet Docker" -a '$UpnpAddr' '$WANPORT' '$LANPORT' '$L4PROTO''
-		echo 本次 UPnP 执行命令 | LOG
-		echo $UpnpStart | LOG
-		UpnpRes=$(eval $UpnpStart 2>&1)
+		[ $StunUpnpInterface ] && local StunUpnpInterface='-m '$StunUpnpInterface''
+		[ $StunUpnpUrl ] && local StunUpnpUrl='-u '$StunUpnpUrl''
+		[ $StunUpnpAddr ] || local StunUpnpAddr=@
+		UPNP_START='upnpc '$StunUpnpArgs' '$StunUpnpInterface' '$StunUpnpUrl' -i -e "STUN BitComet Docker" -a '$StunUpnpAddr' '$UPNP_INPORT' '$UPNP_EXPORT' '$L4PROTO''
+		[ $UPNP_TRY ] || {
+			echo 本次 UPnP 执行命令 | LOG
+			echo $UPNP_START | LOG
+		}
+		UPNP_RES=$(eval $UPNP_START 2>&1)
 		UPNP_FLAG=$?
 		[ $UPNP_FLAG = 0 ] && echo 更新 UPnP 规则成功 | LOG
 	}
-	[ -f /BitComet/DockerStunUpnpInterface ] && export UpnpInterface='br-lan'
-	echo 本次 UPnP 规则：转发 外部端口 $LANPORT 至 内部端口 $WANPORT | LOG
+	[ -f /BitComet/DockerStunUpnpInterface ] && export StunUpnpInterface='br-lan'
+	UPNP_EXPORT=$LANPORT
+	[[ $StunMode =~ ^(tcp|udp)$ ]] && UPNP_INPORT=$WANPORT
+	[[ $StunMode =~ nft ]] && UPNP_INPORT=$LANPORT
+	echo 本次 UPnP 规则：转发 外部端口 $UPNP_EXPORT 至 内部端口 $UPNP_INPORT | LOG
 	ADD_UPNP
-	[ $UPNP_FLAG = 1 ] && [[ $UpnpRes == *'No IGD UPnP Device found on the network'* ]] && [ "$UpnpInterface" != '-m br-lan' ] && \
+	[ $UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && [ "$StunUpnpInterface" != '-m br-lan' ] && \
 	[ $(ls /sys/class/net | grep ^br-lan$) ] && {
 		echo 未找到 IGD UPnP 设备，尝试使用 br-lan 接口 | LOG
-		export UpnpInterface='br-lan'
+		export StunUpnpInterface='br-lan'
 		ADD_UPNP
 		[[ $UPNP_FLAG =~ ^[02]$ ]] && echo br-lan >/BitComet/DockerStunUpnpInterface
 	}
 	# awk '{print$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)" && \
-	[ $UPNP_FLAG = 2 ] && [[ $UpnpRes == *'ConflictWithOtherMechanisms'* ]] && {
+	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && {
 		echo 当前 IGD UPnP 设备启用了端口占用检测，尝试使用兼容模式 | LOG
 		>/BitComet/DockerStunUpnpConflict
-		[ $L4PROTO = tcp ] && NatmapStart=$(ps x | grep 'natmap ' | grep -vE 'grep|-u' | grep -o "natmap.*-b $LANPORT.*")
-		[ $L4PROTO = udp ] && NatmapStart=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
+		[ $L4PROTO = tcp ] && STUN_START=$(ps x | grep 'natmap ' | grep -vE 'grep|-u' | grep -o "natmap.*-b $LANPORT.*")
+		[ $L4PROTO = udp ] && STUN_START=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
 		echo 终止 NATMap 进程并等待端口释放，最大限时 300 秒 | LOG
-		kill $(ps x | grep "$NatmapStart" | grep -v grep | awk '{print$1}')
+		kill $(ps x | grep "$STUN_START" | grep -v grep | awk '{print$1}')
 		for SERVER in $(cat /BitComet/DockerStunServers.txt); do
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
@@ -80,18 +91,18 @@ echo 更新 BitComet 监听端口 | LOG
 		else
 			echo 端口释放失败，仍继续尝试更新 UPnP 规则 | LOG
 		fi
-		until [ $UPNP_FLAG = 0 ] || [ "$UpnpTry" = 5 ]; do
-			let UpnpTry++
-			echo UPnP 兼容模式第 $UpnpTry 次尝试，最多 5 次
+		until [ $UPNP_FLAG = 0 ] || [ "$UPNP_TRY" = 5 ]; do
+			let UPNP_TRY++
+			echo UPnP 兼容模式第 $UPNP_TRY 次尝试，最多 5 次
 			ADD_UPNP
-			[ $UPNP_FLAG = 0 ] || [ $UpnpTry = 5 ] || sleep 15
+			[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
 		done
 		kill $KEEPALIVE_PID >/dev/null 2>&1
 		echo 重新执行 NATMap | LOG
-		eval $NatmapStart
+		eval $STUN_START
 	}
-	[ $UPNP_FLAG = 1 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | head -1 | LOG
-	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UpnpRes" | tail -1 | LOG
+	[ $UPNP_FLAG = 1 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UPNP_RES" | head -1 | LOG
+	[ $UPNP_FLAG = 2 ] && echo 更新 UPnP 规则失败，错误信息如下 | LOG && echo "$UPNP_RES" | tail -1 | LOG
 }
 
 # exit 0
