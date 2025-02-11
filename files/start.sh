@@ -25,10 +25,10 @@ mv -f /tmp/DockerLogs.log /BitComet/DockerLogs.log
 
 # 初始化 BitComet 配置文件
 BC_CFG=/BitComet/BitComet.xml
-if [ ! -f $BC_CFG ]; then
+[ -f $BC_CFG ] || {
 	echo BitComet 配置文件不存在，执行初始化 | LOG
 	cp /files/BitComet.xml $BC_CFG
-fi
+}
 grep DefaultDownloadPath $BC_CFG | grep -q /Downloads || sed 's,<Settings>,<Settings><DefaultDownloadPath>/Downloads</DefaultDownloadPath>,' -i $BC_CFG
 grep EnableUPnP $BC_CFG | grep -q false || sed 's,<Settings>,<Settings><EnableUPnP>false</EnableUPnP>,' -i $BC_CFG
 grep EnableTorrentShare $BC_CFG | grep -q false || sed 's,<Settings>,<Settings><EnableTorrentShare>false</EnableTorrentShare>,' -i $BC_CFG
@@ -53,24 +53,24 @@ fi
 # 初始化 BitComet WebUI 用户名与密码
 [ $WEBUI_USERNAME ] || export WEBUI_USERNAME=$(grep WebInterfaceUsername $BC_CFG | grep -oE '>.*<' | tr -d '><')
 [ $WEBUI_PASSWORD ] || export WEBUI_PASSWORD=$(grep WebInterfacePassword $BC_CFG | grep -oE '>.*<' | tr -d '><')
-if [ "$WEBUI_USERNAME" = test ]; then
+[ "$WEBUI_USERNAME" = test ] && {
 	unset WEBUI_USERNAME
 	echo 禁止使用用户名 test，已清除
-fi
-if [ "$WEBUI_PASSWORD" = test ]; then
+}
+[ "$WEBUI_PASSWORD" = test ] && {
 	unset WEBUI_PASSWORD
 	echo 禁止使用密码 test，已清除
-fi
-if [ ! $WEBUI_USERNAME ]; then
+}
+[ $WEBUI_USERNAME ] || {
 	export WEBUI_USERNAME=$(base64 /proc/sys/kernel/random/uuid | cut -c -8)
 	echo BitComet WebUI 用户名未指定，随机生成以下 8 位用户名 | LOG
 	echo $WEBUI_USERNAME | LOG
-fi
-if [ ! $WEBUI_PASSWORD ]; then
+}
+[ $WEBUI_PASSWORD ] || {
 	export WEBUI_PASSWORD=$(base64 /proc/sys/kernel/random/uuid | cut -c -16)
 	echo BitComet WebUI 密码未指定，随机生成以下 16 位密码 | LOG
 	echo $WEBUI_PASSWORD | LOG
-fi
+}
 >/BitComet/Secrect
 echo WebInterfaceUsername: $WEBUI_USERNAME >>/BitComet/Secrect
 echo WebInterfacePassword: $WEBUI_PASSWORD >>/BitComet/Secrect
@@ -157,7 +157,7 @@ fi
 
 # 初始化 PeerBanHelper 下载器
 grep -q '^client: *$' $PBH_CFG || echo client: >>$PBH_CFG
-if [ ! $(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG) ]; then
+[ $(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG) ] || {
 	echo PeerBanHelper 未配置本机 BitComet，执行初始化 | LOG
 	cat >/tmp/PBH_CLIENT_STR <<EOF
   BitCometDocker:
@@ -170,9 +170,9 @@ if [ ! $(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG) ]; then
     verify-ssl: false
 EOF
 	sed '/^client:/r/tmp/PBH_CLIENT_STR' -i $PBH_CFG
-fi
+}
 PBH_CLIENT_SPACE=$(sed -n '/^client:/,/^[^ ]/{/^ \+BitCometDocker:/p}' $PBH_CFG | grep -o '^ \+')
-if [ ! "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_USERNAME' *$/p}' $PBH_CFG)" ]; then
+[ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_USERNAME' *$/p}' $PBH_CFG)" ] || {
 	echo PeerBanHelper 配置中的本机 BitComet WebUI 用户名不正确，执行更正 | LOG
 	if [ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/^ \+username:/p}' $PBH_CFG)" ]; then
 		sed '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{s/username:.*/username: '$WEBUI_USERNAME'/}' -i $PBH_CFG
@@ -180,8 +180,8 @@ if [ ! "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \
 		PBH_CLIENT_USERNAME_STR=$(sed -n '/^client:/,/^[^ ]/{/^ \+type:/{s/type:.*/username: '$WEBUI_USERNAME'/p}}' $PBH_CFG)
 		sed '/^ \+BitCometDocker:/a\'"$PBH_CLIENT_USERNAME_STR"'' -i $PBH_CFG
 	fi
-fi
-if [ ! "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_PASSWORD' *$/p}' $PBH_CFG)" ]; then
+}
+[ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \+'$WEBUI_PASSWORD' *$/p}' $PBH_CFG)" ] || {
 	echo PeerBanHelper 配置中的本机 BitComet WebUI 密码不正确，执行更正 | LOG
 	if [ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/^ \+password:/p}' $PBH_CFG)" ]; then
 		sed '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{s/password:.*/password: '$WEBUI_PASSWORD'/}' -i $PBH_CFG
@@ -189,8 +189,8 @@ if [ ! "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/: \
 		PBH_CLIENT_PASSWORD_STR=$(sed -n '/^client:/,/^[^ ]/{/^ \+type:/{s/type:.*/password: '$WEBUI_PASSWORD'/p}}' $PBH_CFG)
 		sed '/^ \+BitCometDocker:/a\'"$PBH_CLIENT_PASSWORD_STR"'' -i $PBH_CFG
 	fi
-fi
-if ! sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/endpoint/p}' $PBH_CFG | grep -qE :$BITCOMET_WEBUI_PORT/?$; then
+}
+[ $(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/endpoint/p}' $PBH_CFG | grep -oE :$BITCOMET_WEBUI_PORT/?$) ] || {
 	echo PeerBanHelper 配置中的本机 BitComet WebUI 地址不正确，执行更正 | LOG
 	if [ "$(sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/^ \+endpoint:/p}' $PBH_CFG)" ]; then
 		sed '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{s,endpoint:.*,endpoint: http://127.0.0.1:'$BITCOMET_WEBUI_PORT',}' -i $PBH_CFG
@@ -198,11 +198,11 @@ if ! sed -n '/^ \+BitCometDocker:/,/^'"$PBH_CLIENT_SPACE"'[^ ]\|^[^ ]/{/endpoint
 		PBH_CLIENT_ENDPOINT_STR=$(sed -n '/^client:/,/^[^ ]/{/^ \+type:/{s,type:.*,endpoint: http://127.0.0.1:'$BITCOMET_WEBUI_PORT',p}}' $PBH_CFG)
 		sed '/^ \+BitCometDocker:/a\'"$PBH_CLIENT_ENDPOINT_STR"'' -i $PBH_CFG
 	fi
-fi
+}
 
 # 初始化 STUN
 rm -f /BitComet/DockerStunPort* /BitComet/DockerStunUpnpInterface /BitComet/DockerStunUpnpConflict*
-if [ "$STUN" != 0 ]; then
+[ "$STUN" = 0 ] || {
 	echo 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒 | LOG
 	if wget -qT 15 https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt -O /tmp/DockerStunServers.txt; then
 		echo 更新 STUN 服务器列表成功 | LOG
@@ -212,10 +212,10 @@ if [ "$STUN" != 0 ]; then
 		[ -f /BitComet/DockerStunServers.txt ] || cp /files/stun_servers_ipv4_rst.txt /BitComet/DockerStunServers.txt
 	fi
 	[ $StunMode ] || echo 未指定 STUN 穿透模式，自动设置 | LOG
-	if [ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]]; then
+	[ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
 		echo 错误的 STUN 穿透模式，重新设置 | LOG
-		export StunMode=
-	fi
+		unset StunMode
+	}
 	[ $StunMode ] || \
 	if nft list tables >/dev/null 2>&1; then
 		echo 已开启 NET_ADMIN 权限，使用 TCP 改包模式 | LOG
@@ -234,7 +234,7 @@ if [ "$STUN" != 0 ]; then
 	[ $StunMode = nfttcp ] && echo 当前使用 TCP 改包模式 | LOG && L4PROTO=tcp
 	[ $StunMode = nftudp ] && echo 当前使用 UDP 改包模式 | LOG && L4PROTO=udp
 	[ $StunMode = nftboth ] && echo 当前使用 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
-fi
+}
 
 # 初始化 BitComet BT 端口
 [ $BITCOMET_BT_PORT ] || [[ "$StunMode" =~ ^(tcp|udp)$ ]] || export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><')
@@ -273,19 +273,19 @@ GET_NAT() {
 		IP=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
 		HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$2$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
-		if [ $HEX ]; then
+		[ $HEX ] && {
 			eval HEX$3=$HEX
 			eval SERVER$3=$SERVER
 			break
-		fi
+		}
 	done
 }
-if [ "$STUN" != 0 ]; then
+[ "$STUN" = 0 ] || {
 	echo 检测 NAT 映射行为 | LOG
-	if ls /sys/class/net | grep -q $StunInterface; then
+	[ $(ls /sys/class/net | grep ^$StunInterface$) ] || {
 		echo STUN 绑定端口不存在，已忽略 | LOG
-		export StunInterface=
-	fi
+		unset StunInterface
+	}
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt)" $BITCOMET_BT_PORT 1
 	GET_NAT "$(cat /BitComet/DockerStunServers.txt | grep -v $SERVER1)" $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
@@ -321,7 +321,7 @@ if [ "$STUN" != 0 ]; then
 	else
 		echo 检测 NAT 映射行为失败，本次跳过 | LOG
 	fi
-fi
+}
 
 # 执行 NATMap 及 BitComet
 if [ "$STUN" = 0 ]; then
