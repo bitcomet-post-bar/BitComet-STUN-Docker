@@ -248,8 +248,10 @@ if [ $BITCOMET_BT_PORT ]; then
 		if [ $StunModeLite ] && [ $BITCOMET_BT_PORT -lt 10000 ]; then
 			echo 轻量改包模式下要求 BitComet BT 端口为 5 位数，重新分配 | LOG
 			BC_BT_PORT_FLAG=1
-		[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
-		BC_BT_PORT_ORIG=$BITCOMET_BT_PORT
+		else
+			[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
+			BC_BT_PORT_ORIG=$BITCOMET_BT_PORT
+		fi
 	else
 		echo BitComet BT 端口指定错误，仅接受 65535 以下数字，重新分配 | LOG
 		BC_BT_PORT_FLAG=1
