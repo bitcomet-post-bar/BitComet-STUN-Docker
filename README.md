@@ -48,11 +48,11 @@ STUN 穿透需要锥形 NAT 环境及 网关开启 UPnP 功能。
 | StunInterface | NATMap 绑定接口或 IP<br>通常在策略分流时指定 | 不启用 |
 | StunArgs | [NATMap 其他参数](https://github.com/heiher/natmap#how-to-use) | 无 |
 
-### UPnP
+#### UPnP
 
 | 名称 | 说明 | 默认 |
 | --- | --- | --- |
-| UpnpAddr | UPnP 规则的目的地址<br>Bridge 网络下请填写宿主的本地 IP 地址 | `@`（自动检测本地地址） |
-| UpnpInterface | UPnP 发送 [SSDP](https://zh.wikipedia.org/wiki/SSDP) 报文时使用的接口<br>可填写 IP 地址或接口名称，通常在路由器上运行容器时需要 | 无 |
-| UpnpUrl | UPnP 设备描述文件 (XML) 的 URL<br>用作绕过 [SSDP](https://zh.wikipedia.org/wiki/SSDP)，通常在 Bridge 模式下需要 | 无 |
-| UpnpArgs | [MiniUPnPc 其他参数](https://manpages.debian.org/unstable/miniupnpc/upnpc.1.en.html) | 无 |
+| StunUpnpAddr | UPnP 规则的目的地址<br>Bridge 网络下请填写宿主的本地 IP 地址 | `@`（自动检测本地地址） |
+| StunUpnpInterface | UPnP 发送 [SSDP](https://zh.wikipedia.org/wiki/SSDP) 报文时使用的接口<br>可填写 IP 地址或接口名称，通常在路由器上运行容器时需要 | 无 |
+| StunUpnpUrl | UPnP 设备描述文件 (XML) 的 URL<br>用作绕过 [SSDP](https://zh.wikipedia.org/wiki/SSDP)，通常在 Bridge 模式下需要 | 无 |
+| StunUpnpArgs | [MiniUPnPc 其他参数](https://manpages.debian.org/unstable/miniupnpc/upnpc.1.en.html) | 无 |
