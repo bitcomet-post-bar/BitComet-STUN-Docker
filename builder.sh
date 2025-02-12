@@ -2,20 +2,20 @@ ARCH=$(arch)
 mkdir /files
 # apk --update add curl jq openjdk21 binutils
 apt-get update
-apt-get install -y wget curl jq unzip openjdk-21-jdk binutils
+apt-get install -y curl jq unzip openjdk-21-jdk binutils
 
 # 下载 NATMap，识别对应的指令集架构
 case $ARCH in
   x86_64) DL=x86_64;;
   aarch64) DL=arm64;;
 esac
-wget https://github.com/heiher/natmap/releases/latest/download/natmap-linux-$DL -O /files/natmap
+curl -Lso /files/natmap https://github.com/heiher/natmap/releases/latest/download/natmap-linux-$DL
 
 # 下载 PeerBanHelper
 VER=$(curl -s https://api.github.com/repos/PBH-BTN/PeerBanHelper/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-wget https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanHelper_${VER}.zip -O PBH.zip
+curl -Lso PBH.zip https://github.com/PBH-BTN/PeerBanHelper/releases/download/v${VER}/PeerBanHelper_${VER}.zip
 unzip PBH.zip -d /files
-wget https://raw.githubusercontent.com/PBH-BTN/PeerBanHelper/refs/heads/master/src/main/resources/config.yml -O /files/PeerBanHelper/config.yml
+curl -Lso /files/PeerBanHelper/config.yml https://raw.githubusercontent.com/PBH-BTN/PeerBanHelper/refs/heads/master/src/main/resources/config.yml
 sed -e 's/"//g' -e '/^logger:/,/^[^ ]/{/^ \+hide-finish-log:/{s/false/true/}}' -i /files/PeerBanHelper/config.yml
 
 # 生成 PeerBanHelper 的 JRE
