@@ -23,9 +23,9 @@ for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 21
 DEPS=$(cat /tmp/DEPS | awk '{print$NF}' | grep -E '^(java|jdk)\.' | sort | uniq | tr '\n' ',')jdk.crypto.ec
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
 
-# 复制 BitComet 程序目录
-mkdir /files/BitComet
-cp /root/BitCometApp/usr/* /files/BitComet
+# 移动 BitComet 程序目录
+# mkdir /files/BitComet
+# mv /root/BitCometApp/usr/* /files/BitComet
 
 # 编译 nfqsed
 apt-get install -y git gcc libnetfilter-queue-dev make
