@@ -237,28 +237,38 @@ rm -f /BitComet/DockerStunPort* /BitComet/DockerStunUpnpInterface /BitComet/Dock
 	[ $StunMode = nfttcp ] && echo 当前使用 TCP 改包模式 | LOG && L4PROTO=tcp
 	[ $StunMode = nftudp ] && echo 当前使用 UDP 改包模式 | LOG && L4PROTO=udp
 	[ $StunMode = nftboth ] && echo 当前使用 TCP + UDP 改包模式 | LOG && L4PROTO=tcp
+	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && echo 已启用轻量改包模式，不支持 HTTPS Tracker 且 BitComet BT 端口必须为 5 位数 | LOG
+	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && echo StunModeLite 不适用于传统模式，已忽略 | LOG && unset StunModeLite
 }
 
 # 初始化 BitComet BT 端口
 [ $BITCOMET_BT_PORT ] || [[ "$StunMode" =~ ^(tcp|udp)$ ]] || export BITCOMET_BT_PORT=$(grep ListenPort $BC_CFG | grep -oE '>.*<' | tr -d '><')
 if [ $BITCOMET_BT_PORT ]; then
 	if [[ $BITCOMET_BT_PORT =~ ^[0-9]+$ ]] && [ $BITCOMET_BT_PORT -le 65535 ]; then
+		if [ $StunModeLite ] && [ $BITCOMET_BT_PORT -lt 10000 ]; then
+			echo 轻量改包模式下要求 BitComet BT 端口为 5 位数，重新分配 | LOG
+			BC_BT_PORT_FLAG=1
 		[ $BITCOMET_BT_PORT -ge 1024 ] || echo BitComet BT 端口指定为 1024 以下，可能无法监听 | LOG
 		BC_BT_PORT_ORIG=$BITCOMET_BT_PORT
 	else
-		echo BitComet BT 端口指定错误，仅接受 65535 以下数字，执行初始化 | LOG
-		export BITCOMET_BT_PORT=6082
+		echo BitComet BT 端口指定错误，仅接受 65535 以下数字，重新分配 | LOG
+		BC_BT_PORT_FLAG=1
 	fi
 else
-	echo BitComet BT 端口未指定，执行初始化 | LOG
-	export BITCOMET_BT_PORT=6082
+	echo BitComet BT 端口未指定，自动分配 | LOG
+	BC_BT_PORT_FLAG=1
 fi
+[ $BC_BT_PORT_FLAG ] && {
+	[ $StunModeLite ] && export BITCOMET_BT_PORT=56082
+	[ $StunModeLite ] || export BITCOMET_BT_PORT=6082
+}
 while \
-	echo | timeout 1 socat - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
-	echo | timeout 1 socat - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	# echo | timeout 1 socat - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	# echo | timeout 1 socat - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
+	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 /proc/net/udp /proc/net/udp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' && \
 	echo $BITCOMET_BT_PORT | grep -qE '^'$BITCOMET_WEBUI_PORT'$|^'$PBH_WEBUI_PORT'$'
 do
-	export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
+	export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1)
 	BC_BT_PORT_SHUF=1
 done
 [ $BC_BT_PORT_ORIG ] && [ $BC_BT_PORT_SHUF ] && echo BitComet BT 端口 $BC_BT_PORT_ORIG 被占用，已重新分配 | LOG
@@ -331,6 +341,16 @@ GET_NAT() {
 	else
 		echo 检测 NAT 映射行为失败，本次跳过 | LOG
 	fi
+}
+
+# 初始化 sslsplit
+[ $StunModeLite ] || {
+	STUN_CA=DockerStunCA_$(echo $HOSTNAME | sed 's/[[:punct:]]/_/g')
+	mkdir -p /usr/local/share/ca-certificates/
+	openssl genrsa -out $STUN_CA.key 2048
+	openssl req -new -x509 -days 3650 -key $STUN_CA.key -out $STUN_CA.crt -subj "/C=CN/ST=Shanghai/L=Shanghai/O=BitCometPostBar/OU=STUN/CN=STUN_CA"
+	cp -f $STUN_CA.crt /usr/local/share/ca-certificates/
+	update-ca-certificates >/dev/null # 2>&1
 }
 
 # 执行 NATMap 及 BitComet
