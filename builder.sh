@@ -28,8 +28,8 @@ jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modu
 # mv /root/BitCometApp/usr/* /files/BitComet
 
 # 编译 nfqsed
-apt-get install -y git gcc libnetfilter-queue-dev make
-git clone https://github.com/rgerganov/nfqsed.git
-cd nfqsed
-make
-cp ./nfqsed /files/nfqsed
+# apt-get install -y git gcc libnetfilter-queue-dev make
+# git clone https://github.com/rgerganov/nfqsed.git
+# cd nfqsed
+# make
+# cp ./nfqsed /files/nfqsed
