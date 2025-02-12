@@ -28,7 +28,7 @@ mkdir /files/BitComet
 cp /root/BitCometApp/usr/* /files/BitComet
 
 # 编译 nfqsed
-apt-get install -y gcc libnetfilter-queue-dev
+apt-get install -y gcc libnetfilter-queue-dev make
 git clone https://github.com/rgerganov/nfqsed.git
 cd nfqsed
 make
