@@ -13,7 +13,7 @@ RUN chmod +x /files/* && \
 #   apt-get install -y miniupnpc nftables socat busybox && \
 #   ln -s /bin/busybox /usr/bin/xxd && \
 #   ln -s /bin/busybox /usr/bin/wget && \
-    apt-get install -y miniupnpc nftables socat xxd openssl && \
+    apt-get install -y miniupnpc nftables socat sslsplit xxd && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
