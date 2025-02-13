@@ -13,17 +13,15 @@ ENV PATH="$PATH:/files:/files/PeerBanHelper/jre/bin" \
     LANG=C.UTF-8
 RUN chmod +x /files/* && \
     apt-get update && \
-#   apt-get install -y miniupnpc nftables socat busybox && \
-#   ln -s /bin/busybox /usr/bin/xxd && \
-#   ln -s /bin/busybox /usr/bin/wget && \
     apt-get install -y miniupnpc nftables socat openssl ca-certificates sslsplit xxd && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /PeerBanHelper /PBHDIR && \
     ln -s /Downloads /root/Downloads && \
-    echo '# Docker by Post-Bar. You will not see this in host network.' >>/etc/hosts
-# VOLUME /tmp
+    echo '# Docker by Post-Bar. You will not see this in host network.' >>/etc/hosts && \
+    useradd -u 56082 bitcometd && \
+    useradd -u 58443 sslsplit
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files
 CMD ["start.sh"]
 
