@@ -347,12 +347,13 @@ GET_NAT() {
 
 # 初始化 sslsplit
 [ $StunModeLite ] || {
-	STUN_CA=DockerStunCA_$(echo $HOSTNAME | sed 's/[[:punct:]]/_/g')
+	useradd 
+	STUN_ID=DockerStunCA_$(echo $HOSTNAME | sed 's/[[:punct:]]/_/g')
 	mkdir -p /usr/local/share/ca-certificates/
-	openssl genrsa -out $STUN_CA.key 2048
-	openssl req -new -x509 -days 3650 -key $STUN_CA.key -out $STUN_CA.crt -subj "/C=CN/ST=Shanghai/L=Shanghai/O=BitCometPostBar/OU=STUN/CN=STUN_CA"
-	cp -f $STUN_CA.crt /usr/local/share/ca-certificates/
-	update-ca-certificates >/dev/null # 2>&1
+	openssl genrsa -out $STUN_ID.key 2048
+	openssl req -new -x509 -days 3650 -key $STUN_ID.key -out $STUN_ID.crt -subj "/C=CN/ST=Shanghai/L=Shanghai/O=BitCometPostBar/OU=STUN/CN=STUN_CA"
+	cp -f $STUN_ID.crt /usr/local/share/ca-certificates/
+	update-ca-certificates >/dev/null 2>&1
 }
 
 # 执行 NATMap 及 BitComet
