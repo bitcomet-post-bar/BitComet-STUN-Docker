@@ -21,7 +21,8 @@ RUN chmod +x /files/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /PeerBanHelper /PBHDIR && \
-    ln -s /Downloads /root/Downloads
+    ln -s /Downloads /root/Downloads && \
+    echo '# Docker by Post-Bar. You will not see this if in host network.' >>/etc/hosts
 # VOLUME /tmp
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files
 CMD ["start.sh"]
