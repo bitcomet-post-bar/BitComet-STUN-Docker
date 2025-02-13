@@ -347,7 +347,6 @@ GET_NAT() {
 
 # 初始化 sslsplit
 [ $StunModeLite ] || {
-	useradd 
 	STUN_ID=DockerStunCA_$(echo $HOSTNAME | sed 's/[[:punct:]]/_/g')
 	mkdir -p /usr/local/share/ca-certificates/
 	openssl genrsa -out $STUN_ID.key 2048
