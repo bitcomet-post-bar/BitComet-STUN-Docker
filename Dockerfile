@@ -19,7 +19,7 @@ RUN chmod +x /files/* && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /PeerBanHelper /PBHDIR && \
     ln -s /Downloads /root/Downloads && \
-    echo '# Powered by Post-Bar. You will not see this in host network.' >>/etc/hosts && \
+    echo '# Powered by BitComet-Post-Bar. You will not see this in host network.' >>/etc/hosts && \
     useradd -u 56082 bitcometd && \
     useradd -u 58443 sslsplit
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files
