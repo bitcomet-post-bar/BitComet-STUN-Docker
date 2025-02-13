@@ -20,7 +20,7 @@ sed -e 's/"//g' -e '/^logger:/,/^[^ ]/{/^ \+hide-finish-log:/{s/false/true/}}' -
 
 # 生成 PeerBanHelper 的 JRE
 for JAR in $(find /files/PeerBanHelper | grep .jar); do jdeps --multi-release 21 $JAR >>/tmp/DEPS 2>/dev/null; done
-DEPS=$(cat /tmp/DEPS | awk '{print$NF}' | grep -E '^(java|jdk)\.' | sort | uniq | grep -v jdk.crypto.ec | tr '\n' ',')jdk.crypto.ec
+DEPS=$(awk '{print$NF}' /tmp/DEPS | grep -E '^(java|jdk)\.' | sort | uniq | grep -v jdk.crypto.ec | tr '\n' ',')jdk.crypto.ec
 jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modules $DEPS --output /files/PeerBanHelper/jre
 
 # 移动 BitComet 程序目录
