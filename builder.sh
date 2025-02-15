@@ -33,3 +33,10 @@ jlink --no-header-files --no-man-pages --compress=zip-9 --strip-debug --add-modu
 # cd nfqsed
 # make
 # cp ./nfqsed /files/nfqsed
+
+# 编译 SSLproxy
+git clone https://github.com/sonertari/SSLproxy
+cd SSLproxy
+export FEATURES="-DWITHOUT_MIRROR -DWITHOUT_USERAUTH"
+make
+cp ./src/sslproxy /files/sslproxy
