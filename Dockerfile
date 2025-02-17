@@ -19,7 +19,7 @@ RUN chmod +x /files/* && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /PeerBanHelper /PBHDIR && \
     ln -s /Downloads /root/Downloads && \
-    useradd -u 56082 bitcometd -d /var/run/bitcometd -s /bin/false && \
+    useradd -u 56082 bitcometd -d /var/run/bitcomet -s /bin/false && \
     useradd -u 58443 sslproxy -d /var/run/sslproxy -s /bin/false
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files
 CMD ["start.sh"]
