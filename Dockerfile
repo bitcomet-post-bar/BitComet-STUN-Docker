@@ -15,12 +15,12 @@ RUN chmod +x /files/* && \
     apt-get update && \
     apt-get install -y miniupnpc nftables xxd socat openssl ca-certificates libevent-2.1-7t64 libevent-openssl-2.1-7t64 libevent-pthreads-2.1-7t64 && \
     rm -rf /var/lib/apt/lists/* && \
-    mkdir /root/.config && \
-    ln -s /BitComet /root/.config/BitComet && \
-    ln -s /PeerBanHelper /PBHDIR && \
-    ln -s /Downloads /root/Downloads && \
-    useradd -u 56082 bitcometd -d /var/run/bitcomet -s /bin/false && \
-    useradd -u 58443 sslproxy -d /var/run/sslproxy -s /bin/false
+    useradd -u 56082 bitcomet -d /home/bitcomet && \
+    useradd -u 58443 sslproxy -d /nonexistent -s /usr/sbin/nologin && \
+    mkdir -p /home/bitcomet/.config && \
+    ln -s /BitComet /home/bitcomet/.config/BitComet && \
+    ln -s /Downloads /home/bitcomet/Downloads && \
+    ln -s /PeerBanHelper /PBHDIR
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files
 CMD ["start.sh"]
 
