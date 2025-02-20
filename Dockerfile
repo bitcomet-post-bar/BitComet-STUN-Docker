@@ -17,7 +17,7 @@ RUN chmod +x /files/* && \
     rm -rf /var/lib/apt/lists/* && \
     useradd bitcomet -u 56082 -m -s /bin/bash && \
     useradd sslproxy -u 58443 -d /nonexistent -s /usr/sbin/nologin && \
-    # mkdir -p /home/bitcomet/.config && \
+    # mkdir /home/bitcomet/.config && \
     # ln -s /BitComet /home/bitcomet/.config/BitComet && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
