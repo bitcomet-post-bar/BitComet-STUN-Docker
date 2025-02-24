@@ -427,7 +427,6 @@ else
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
 	sleep 5
-	fi
 	[ $StunServer ] || export StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || export StunHttpServer=qq.com
 	[ $StunInterval ] || export StunInterval=25
