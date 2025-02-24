@@ -257,6 +257,46 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 	fi
 }
 
+# 初始化 STUN
+rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables
+[ "$STUN" = 0 ] || {
+	LOG 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒
+	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/DockerStunServers.txt
+	if [ -s /tmp/DockerStunServers.txt ]; then
+		LOG 更新 STUN 服务器列表成功
+		mv -f /tmp/DockerStunServers.txt /BitComet/DockerStunServers.txt
+	else
+		LOG 更新 STUN 服务器列表失败，本次跳过
+		[ -f /BitComet/DockerStunServers.txt ] || cp /files/DockerStunServers.txt /BitComet/DockerStunServers.txt
+	fi
+	[ $StunMode ] || LOG 未指定 STUN 穿透模式，自动设置
+	[ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
+		LOG 错误的 STUN 穿透模式，重新设置
+		unset StunMode
+	}
+	[ $StunMode ] || \
+	if nft list tables >/dev/null 2>&1; then
+		LOG 已开启 NET_ADMIN 权限，使用 TCP 改包模式
+		export StunMode=nfttcp
+	else
+		LOG 未开启 NET_ADMIN 权限，使用 TCP 传统模式
+		export StunMode=tcp
+	fi
+	[[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1 && {
+		LOG 已指定 nftables 改包模式，但未开启 NET_ADMIN 权限；自动设置为传统模式
+		[[ $StunMode =~ ^nftudp$ ]] || export StunMode=tcp
+		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	}
+	[ $StunMode = tcp ] && LOG 当前使用 TCP 传统模式 && L4PROTO=tcp
+	[ $StunMode = udp ] && LOG 当前使用 UDP 传统模式 && L4PROTO=udp
+	[ $StunMode = nfttcp ] && LOG 当前使用 TCP 改包模式 && L4PROTO=tcp
+	[ $StunMode = nftudp ] && LOG 当前使用 UDP 改包模式 && L4PROTO=udp
+	[ $StunMode = nftboth ] && LOG 当前使用 TCP + UDP 改包模式 && L4PROTO=tcp
+	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
+}
+
 # 检测 NAT 映射行为
 GET_NAT() {
 	LOG 使用 $1/$L4PROTO 进行第 $2 次绑定请求
@@ -326,46 +366,6 @@ GET_NAT() {
 	fi
 }
 
-# 初始化 STUN
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables
-[ "$STUN" = 0 ] || {
-	LOG 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒
-	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
-	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/DockerStunServers.txt
-	if [ -s /tmp/DockerStunServers.txt ]; then
-		LOG 更新 STUN 服务器列表成功
-		mv -f /tmp/DockerStunServers.txt /BitComet/DockerStunServers.txt
-	else
-		LOG 更新 STUN 服务器列表失败，本次跳过
-		[ -f /BitComet/DockerStunServers.txt ] || cp /files/DockerStunServers.txt /BitComet/DockerStunServers.txt
-	fi
-	[ $StunMode ] || LOG 未指定 STUN 穿透模式，自动设置
-	[ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
-		LOG 错误的 STUN 穿透模式，重新设置
-		unset StunMode
-	}
-	[ $StunMode ] || \
-	if nft list tables >/dev/null 2>&1; then
-		LOG 已开启 NET_ADMIN 权限，使用 TCP 改包模式
-		export StunMode=nfttcp
-	else
-		LOG 未开启 NET_ADMIN 权限，使用 TCP 传统模式
-		export StunMode=tcp
-	fi
-	[[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1 && {
-		LOG 已指定 nftables 改包模式，但未开启 NET_ADMIN 权限；自动设置为传统模式
-		[[ $StunMode =~ ^nftudp$ ]] || export StunMode=tcp
-		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
-	}
-	[ $StunMode = tcp ] && LOG 当前使用 TCP 传统模式 && L4PROTO=tcp
-	[ $StunMode = udp ] && LOG 当前使用 UDP 传统模式 && L4PROTO=udp
-	[ $StunMode = nfttcp ] && LOG 当前使用 TCP 改包模式 && L4PROTO=tcp
-	[ $StunMode = nftudp ] && LOG 当前使用 UDP 改包模式 && L4PROTO=udp
-	[ $StunMode = nftboth ] && LOG 当前使用 TCP + UDP 改包模式 && L4PROTO=tcp
-	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
-	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
-}
-
 # 初始化 SSLproxy
 [ "$STUN" != 0 ] && [[ $StunMode =~ nft ]] && [ ! $StunModeLite ] && {
 	if [ $StunMitmEnPort ]; then
@@ -423,10 +423,10 @@ else
 			export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 		done
 	}
-	LOG 启动 BitComet 后执行 NATMap
+	LOG 执行 NATMap 后启动 BitComet
 	# su - bitcomet -c '/files/BitComet/bin/bitcometd &'
-	/files/BitComet/bin/bitcometd &
-	sleep 3
+	# /files/BitComet/bin/bitcometd &
+	# sleep 3
 	[ $StunServer ] || export StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || export StunHttpServer=qq.com
 	[ $StunInterval ] || export StunInterval=25
@@ -447,6 +447,9 @@ else
 		LOG $STUN_START
 		eval $STUN_START
 	fi
+	LOG 15 秒后启动 BitComet
+	sleep 15 
+	/files/BitComet/bin/bitcometd &
 fi
 
 # 执行 PeerBanHelper
@@ -454,8 +457,8 @@ if [ "$PBH" = 0 ]; then
 	LOG 已禁用 PeerBanHelper
 	exec sleep infinity
 else
-	LOG 已启用 PeerBanHelper，60 秒后启动
-	sleep 60
+	LOG 已启用 PeerBanHelper，30 秒后启动
+	sleep 30
 	( cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
 	grep -vE '(/|-)INFO' & )
