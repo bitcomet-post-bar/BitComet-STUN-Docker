@@ -19,6 +19,7 @@ RUN chmod +x /files/* && \
     # useradd bitcomet -u 56082 -m -s /bin/bash && \
     # mkdir /home/bitcomet/.config && \
     # ln -s /BitComet /home/bitcomet/.config/BitComet && \
+    # ln -s /Downloads /home/bitcomet/Downloads && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /Downloads /root/Downloads && \
