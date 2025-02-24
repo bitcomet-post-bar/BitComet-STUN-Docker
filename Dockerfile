@@ -15,8 +15,8 @@ RUN chmod +x /files/* && \
     apt-get update && \
     apt-get install -y miniupnpc nftables xxd socat openssl ca-certificates libevent-2.1-7t64 libevent-openssl-2.1-7t64 libevent-pthreads-2.1-7t64 && \
     rm -rf /var/lib/apt/lists/* && \
-    useradd bitcomet -u 56082 -m -s /bin/bash && \
     useradd sslproxy -u 58443 -d /nonexistent -s /usr/sbin/nologin && \
+    # useradd bitcomet -u 56082 -m -s /bin/bash && \
     # mkdir /home/bitcomet/.config && \
     # ln -s /BitComet /home/bitcomet/.config/BitComet && \
     mkdir /root/.config && \
