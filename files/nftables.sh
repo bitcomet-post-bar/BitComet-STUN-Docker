@@ -32,8 +32,8 @@ LOG nftables 规则已存在，无需更新 && exit
 nft add table ip STUN
 nft add chain ip STUN BTTR { type filter hook postrouting priority filter \; }
 nft flush chain ip STUN BTTR
-WANTCP=$(awk '{print$1}' /BitComet/DockerStunPort_tcp 2>/dev/null)
-WANUDP=$(awk '{print$1}' /BitComet/DockerStunPort_udp 2>/dev/null)
+WANTCP=$(awk '{print$1}' StunPort_tcp 2>/dev/null)
+WANUDP=$(awk '{print$1}' StunPort_udp 2>/dev/null)
 [ $IFNAME ] && OIFNAME='oifname '$IFNAME''
 # BitComet 目前指定 UID 会导致无法热更新端口
 # APPRULE='skuid 56082'
@@ -94,27 +94,28 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 [ $StunModeLite ] || {
 	LOG 获取 HTTPS Tracker 列表，最多等待 15 秒
 	echo -ne "GET /https_trackers.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
-	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE 'https://.*' >/tmp/DockerHttpsTrackers.txt
-	if [ -s /tmp/DockerHttpsTrackers.txt ]; then
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE 'https://.*' >/tmp/HttpsTrackers.txt
+	if [ -s /tmp/HttpsTrackers.txt ]; then
 		LOG 获取 HTTPS Tracker 列表成功
-		if cmp -s /tmp/DockerHttpsTrackers.txt /BitComet/DockerHttpsTrackers.txt; then
-			rm -f /tmp/DockerHttpsTrackers.txt
+		if cmp -s /tmp/HttpsTrackers.txt HttpsTrackers.txt; then
+			rm -f /tmp/HttpsTrackers.txt
 		else
-			mv -f /tmp/DockerHttpsTrackers.txt /BitComet/DockerHttpsTrackers.txt
+			mv -f /tmp/HttpsTrackers.txt HttpsTrackers.txt
 		fi
 	else
 		LOG 获取 HTTPS Tracker 列表失败，本次跳过
-		[ -f /BitComet/DockerHttpsTrackers.txt ] || cp /files/DockerHttpsTrackers.txt /BitComet/DockerHttpsTrackers.txt
+		[ -f HttpsTrackers.txt ] || cp /files/HttpsTrackers.txt HttpsTrackers.txt
 	fi
 	LOG 解析 HTTPS Tracker 列表，可能需要一些时间
 	nft add set ip STUN BTTR_HTTPS "{ type ipv4_addr . inet_service; }"
 	nft flush set ip STUN BTTR_HTTPS
-	for SERVER in $(awk -F / '{print $3}' /BitComet/DockerHttpsTrackers.txt); do
+	for SERVER in $(awk -F / '{print $3}' HttpsTrackers.txt); do
 		DOMAIN=$(echo $SERVER | awk -F : '{print$1}')
 		PORT=$(echo $SERVER | awk -F : '{print$2}')
 		for IP in $(getent ahosts $DOMAIN | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | sort | uniq); do nft add element ip STUN BTTR_HTTPS { $IP . $PORT }; done
 	done
-	for LINE in $(grep -v '#.*' /BitComet/DockerHttpsTrackersCustom.txt); do
+	[ -f /BitComet/CustomHttpsTrackers.txt ] || cp /files/CustomHttpsTrackers.txt /BitComet/CustomHttpsTrackers.txt
+	for LINE in $(grep -v '#.*' /BitComet/CustomHttpsTrackers.txt); do
 		if echo $LINE | grep -q https://; then
 			SERVER=$(echo $LINE | awk -F / '{print $3}')
 			DOMAIN=$(echo $SERVER | awk -F : '{print$1}')
@@ -135,7 +136,7 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 }
 
 # 绕过软件加速
-nft -st list ruleset 2>/dev/null | grep -q @ft {
+nft -st list ruleset 2>/dev/null | grep -q @ft && {
 	CTMARK=0x$(echo $OWNNAME | md5sum | cut -c -8)
 	nft add chain ip STUN BTTR_NOFT { type filter hook forward priority filter - 5 \; }
 	for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
