@@ -262,13 +262,13 @@ rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables
 [ "$STUN" = 0 ] || {
 	LOG 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒
 	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
-	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/DockerStunServers.txt
-	if [ -s /tmp/DockerStunServers.txt ]; then
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/StunServers.txt
+	if [ -s /tmp/StunServers.txt ]; then
 		LOG 更新 STUN 服务器列表成功
-		mv -f /tmp/DockerStunServers.txt /BitComet/DockerStunServers.txt
+		mv -f /tmp/StunServers.txt StunServers.txt
 	else
 		LOG 更新 STUN 服务器列表失败，本次跳过
-		[ -f /BitComet/DockerStunServers.txt ] || cp /files/DockerStunServers.txt /BitComet/DockerStunServers.txt
+		[ -f StunServers.txt ] || cp /files/StunServers.txt StunServers.txt
 	fi
 	[ $StunMode ] || LOG 未指定 STUN 穿透模式，自动设置
 	[ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
@@ -306,7 +306,7 @@ GET_NAT() {
 	else
 		local StunInterface=',interface='$StunInterface''
 	fi
-	for SERVER in $(sort -R /tmp/DockerStunServers.txt); do
+	for SERVER in $(sort -R /tmp/StunServers.txt); do
 		local IP=$(echo $SERVER | awk -F : '{print$1}')
 		local PORT=$(echo $SERVER | awk -F : '{print$2}')
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
@@ -316,7 +316,7 @@ GET_NAT() {
 			break
 		else
 			LOG STUN 服务器 $SERVER 不可用，后续排除
-			sed '/^'$SERVER'$/d' -i /tmp/DockerStunServers.txt
+			sed '/^'$SERVER'$/d' -i /tmp/StunServers.txt
 		fi
 	done
 }
@@ -326,8 +326,8 @@ GET_NAT() {
 		LOG STUN 绑定端口不存在，已忽略
 		unset StunInterface
 	}
-	cp -f /BitComet/DockerStunServers.txt /tmp/DockerStunServers.txt
-	LOG 已获取 $(wc -l < /tmp/DockerStunServers.txt) 个 STUN 服务器
+	cp -f StunServers.txt /tmp/StunServers.txt
+	LOG 已获取 $(wc -l < /tmp/StunServers.txt) 个 STUN 服务器
 	GET_NAT $BITCOMET_BT_PORT 1
 	[ $HEX1 ] && \
 	GET_NAT $BITCOMET_BT_PORT 2
