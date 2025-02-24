@@ -423,10 +423,13 @@ else
 			export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
 		done
 	}
-	LOG 执行 NATMap 后启动 BitComet
-	# su - bitcomet -c '/files/BitComet/bin/bitcometd &'
-	# /files/BitComet/bin/bitcometd &
-	# sleep 3
+	if [[ $StunMode =~ nft ]]; then
+		LOG 执行 NATMap 后，等待 15 秒启动 BitComet
+	else
+		LOG 启动 BitComet 后，等待 15 秒执行 NATMap
+		/files/BitComet/bin/bitcometd &
+		sleep 15
+	fi
 	[ $StunServer ] || export StunServer=turn.cloudflare.com
 	[ $StunHttpServer ] || export StunHttpServer=qq.com
 	[ $StunInterval ] || export StunInterval=25
@@ -447,9 +450,10 @@ else
 		LOG $STUN_START
 		eval $STUN_START
 	fi
-	LOG 15 秒后启动 BitComet
-	sleep 15 
-	/files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] && {
+		sleep 15 
+		/files/BitComet/bin/bitcometd &
+	}
 fi
 
 # 执行 PeerBanHelper
