@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# 防止脚本重复运行
+kill $(ps x | grep $0 | grep -v grep | awk '{print$1}' | grep -v $$) 2>/dev/null
+
+CTMARK=$1
+TABLE=$(nft -st list ruleset | sed '/flow add @/q' | grep -oE '^table.*\{' | awk '{print$2,$3}' | tail -1)
+CHAIN=$(nft -st list ruleset | sed '/flow add @/q' | grep -oE 'chain.*\{' | awk '{print$2}' | tail -1)
+while :; do
+	nft -s list chain $TABLE $CHAIN | grep -q ${OWNNAME}_noft || {
+		HANDLE=$(nft -as list chain $TABLE $CHAIN | sed '/flow add @/q' | awk 'END{print$NF}')
+		[ $HANDLE ] && {
+			echo 检测到软件加速，绕过 Tracker 流量 | tee -a /BitComet/DockerLogs.log
+			nft insert rule $TABLE $CHAIN handle $HANDLE $OIFNAME $APPRULE tcp flags { syn, ack } accept comment ${OWNNAME}_noft
+			nft insert rule $TABLE $CHAIN handle $HANDLE $OIFNAME $APPRULE ct mark $CTMARK counter accept comment ${OWNNAME}_noft
+		}
+	}
+	sleep 60
+done
