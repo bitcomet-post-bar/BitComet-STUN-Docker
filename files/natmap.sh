@@ -78,7 +78,7 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		[ $L4PROTO = udp ] && STUN_START=$(ps x | grep 'natmap ' | grep -e '-u' | grep -v grep | grep -o "natmap.*-b $LANPORT.*")
 		LOG 终止 natmap 进程并等待端口释放，最大限时 300 秒
 		kill $(ps x | grep "$STUN_START" | grep -v grep | awk '{print$1}')
-		for SERVER in $(cat /BitComet/DockerStunServers.txt); do
+		for SERVER in $(cat StunServers.txt); do
 			IP=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$LANPORT >/dev/null 2>&1
