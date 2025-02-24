@@ -147,7 +147,7 @@ nft -st list ruleset 2>/dev/null | grep -q @ft && {
 }
 
 # 容器退出时清理 nftables 规则
-[ $StunModeHost ] || [ $StunModeHostUID ] && (ps x | grep -q $OWNNAME || nohup nftables_cleanup.sh $OWNNAME $CTMARK &)
+[ $StunHost = 1 ] && (ps x | grep -q $OWNNAME || nohup nftables_cleanup.sh $OWNNAME $CTMARK &)
 
 >StunNftables
 LOG 更新 nftables 规则完成
