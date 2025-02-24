@@ -95,8 +95,6 @@ while (>/dev/tcp/0.0.0.0/$BITCOMET_WEBUI_PORT) 2>/dev/null || echo $BITCOMET_WEB
 	BC_WEBUI_PORT_SHUF=1
 done
 [ $BC_WEBUI_PORT_ORIG ] &&[ $BC_WEBUI_PORT_SHUF ] && LOG BitComet WebUI 端口 $BC_WEBUI_PORT_ORIG 被占用，已重新分配
-LOG BitComet WebUI 使用以下地址访问
-for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
 
 # 初始化 PeerBanHelper 配置文件
 PBH_CFG=/PeerBanHelper/data/config/config.yml
@@ -145,8 +143,6 @@ while (>/dev/tcp/0.0.0.0/$PBH_WEBUI_PORT) 2>/dev/null || echo $PBH_WEBUI_PORT | 
 	PBH_PORT_SHUF=1
 done
 [ $PBH_PORT_ORIG ] && [ $PBH_PORT_SHUF ] && LOG PeerBanHelper WebUI 端口 $PBH_PORT_ORIG 被占用，已重新分配
-LOG PeerBanHelper WebUI 使用以下地址访问
-for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
 [ $PBH_WEBUI_PORT != "$PBH_PORT_ORIG" ] && \
 if [ "$(sed -n '/^server:/,/^[^ ]/{/^ \+http:/p}' $PBH_CFG)" ]; then
 	sed '/^server:/,/^[^ ]/{/^ \+http:/{s/http:.*/http: '$PBH_WEBUI_PORT'/}}' -i $PBH_CFG
@@ -455,6 +451,8 @@ else
 		/files/BitComet/bin/bitcometd &
 	}
 fi
+LOG BitComet 已启动，使用以下地址访问 WebUI
+for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
 
 # 执行 PeerBanHelper
 if [ "$PBH" = 0 ]; then
@@ -466,5 +464,7 @@ else
 	( cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
 	grep -vE '(/|-)INFO' & )
+	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
+	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
 	exec sleep infinity
 fi
