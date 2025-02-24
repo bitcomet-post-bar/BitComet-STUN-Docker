@@ -21,7 +21,7 @@ RUN chmod +x /files/* && \
     # ln -s /BitComet /home/bitcomet/.config/BitComet && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
-    ln -s /Downloads /home/bitcomet/Downloads && \
+    ln -s /Downloads /root/Downloads && \
     ln -s /PeerBanHelper /PBHDIR
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files/DockerStunServers.txt
 ADD https://oniicyan.pages.dev/https_trackers.txt /files/DockerHttpsTrackers.txt
