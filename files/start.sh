@@ -402,6 +402,7 @@ GET_NAT() {
 	openssl req -new -x509 -days 3650 -key $STUN_ID.key -out $STUN_ID.crt -subj "/C=CN/ST=Shanghai/L=Shanghai/O=BitCometPostBar/OU=STUN/CN=STUN_CA"
 	cp -f $STUN_ID.crt /usr/local/share/ca-certificates/
 	update-ca-certificates >/dev/null 2>&1
+	[ "$PBH" != 0 ] && keytool -importcert -trustcacerts -file $STUN_ID.crt -keystore /files/PeerBanHelper/jre/lib/security/cacerts -alias MITM -storepass STUN_CA
 	sslproxy -d -u sslproxy -k $STUN_ID.key -c $STUN_ID.crt -P ssl 0.0.0.0 $StunMitmEnPort up:$StunMitmDePort
 	socat TCP-LISTEN:$StunMitmDePort,reuseport,fork EXEC:socat.sh &
 }
