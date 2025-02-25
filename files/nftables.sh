@@ -156,7 +156,7 @@ nft -st list ruleset 2>/dev/null | grep -q @ft && {
 # 无法复用端口时额外进行 DNAT
 [ $APPPORT = $LANPORT ] || (
 	[ $IFNAME ] && IIFNAME='iifname '$IFNAME''
-	nft add chain ip STUN DNAT { type nat hook prerouting priority dstnat \; }
+	nft add chain ip STUN DNAT { type nat hook prerouting priority dstnat - 5 \; }
 	nft add rule ip STUN DNAT $IIFNAME meta nfproto ipv4 tcp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
 	nft add rule ip STUN DNAT $IIFNAME meta nfproto ipv4 udp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
 )
