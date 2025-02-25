@@ -1,13 +1,13 @@
 #!/bin/bash
 
+# 初始化变量
 WANADDR=$1
 WANPORT=$2
-LANPORT=$4
-L4PROTO=$5
-OWNADDR=$6
+LANPORT=$3
+L4PROTO=$4
 
-APPPORT=$LANPORT
-OWNNAME=Docker_BitComet_$LANPORT
+APPPORT=$BITCOMET_BT_PORT
+NFTNAME=Docker_BitComet_$LANPORT
 [ "$StunInterface" ] && \
 if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
 	LOG nftables 不支持 IP 形式 $(echo $StunInterface | awk '{print$2}') 绑定接口，已忽略
@@ -19,10 +19,10 @@ fi
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
 # 防止脚本重复运行
-kill $(ps x | grep $0 | grep $L4PROTO | grep -v grep | awk '{print$1}' | grep -v $$) 2>/dev/null
+pkill -Af "$0 $*"
 
 # 若规则未发生变化，则退出脚本
-[ -f StunNftables ] && nft -st list table ip STUN 2>&1 | grep $OWNNAME | grep -q $(printf '0x%x' $WANPORT) && \
+[ -f StunNftables ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
 LOG nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
@@ -69,11 +69,11 @@ nft add set ip STUN BTTR_HTTP "{ type ipv4_addr . inet_service; flags dynamic; t
 nft add chain ip STUN BTTR_HTTP
 nft insert rule ip STUN BTTR ip daddr . tcp dport @BTTR_HTTP goto BTTR_HTTP
 nft add rule ip STUN BTTR $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f add @BTTR_HTTP { ip daddr . tcp dport } goto BTTR_HTTP
-for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
+for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 for OFFSET in $($OFFSET_HTTP_SEQ); do
-	nft insert rule ip STUN BTTR_HTTP $OIFNAME $APPRULE $OFFSET_BASE,$OFFSET,80 $STRAPP $OFFSET_BASE,$(($OFFSET+32)),48 set $SETSTR counter accept comment $OWNNAME
+	nft insert rule ip STUN BTTR_HTTP $OIFNAME $APPRULE $OFFSET_BASE,$OFFSET,80 $STRAPP $OFFSET_BASE,$(($OFFSET+32)),48 set $SETSTR counter accept comment $NFTNAME
 done
-nft insert rule ip STUN BTTR_HTTP ip daddr != 127.0.0.1 update @BTTR_HTTP { ip daddr . tcp dport } comment $OWNNAME
+nft insert rule ip STUN BTTR_HTTP ip daddr != 127.0.0.1 update @BTTR_HTTP { ip daddr . tcp dport } comment $NFTNAME
 
 # UDP Tracker
 if [ $WANTCP ] && [ $WANUDP ]; then
@@ -87,8 +87,8 @@ nft add set ip STUN BTTR_UDP "{ type ipv4_addr . inet_service; flags dynamic; ti
 nft add chain ip STUN BTTR_UDP
 nft insert rule ip STUN BTTR ip daddr . udp dport @BTTR_UDP goto BTTR_UDP
 nft add rule ip STUN BTTR $OFFSET_UDP_MAGIC 0x41727101980 $OFFSET_UDP_ACTION 0 add @BTTR_UDP { ip daddr . udp dport } goto BTTR_UDP
-for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
-nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_UDP_PORT $APPPORT $OFFSET_UDP_PORT set $SETNUM update @BTTR_UDP { ip daddr . udp dport } counter accept comment $OWNNAME
+for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
+nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_UDP_PORT $APPPORT $OFFSET_UDP_PORT set $SETNUM update @BTTR_UDP { ip daddr . udp dport } counter accept comment $NFTNAME
 
 # HTTPS Trackers
 [ $StunModeLite ] || {
@@ -137,24 +137,32 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 		LOG "$(echo "$LIST" | sed '/^$/d')"
 	}
 	nft add chain ip STUN MITM_OUTPUT { type nat hook output priority dstnat \; }
-	for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
-	nft insert rule ip STUN MITM_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $OWNNAME
+	for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
+	nft insert rule ip STUN MITM_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
 	nft insert rule ip STUN BTTR ip daddr 127.0.0.1 $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f goto BTTR_HTTP
 }
 
 # 绕过软件加速
 nft -st list ruleset 2>/dev/null | grep -q @ft && {
-	CTMARK=0x$(echo $OWNNAME | md5sum | cut -c -8)
+	CTMARK=0x$(echo $NFTNAME | md5sum | cut -c -8)
 	nft add chain ip STUN BTTR_NOFT { type filter hook forward priority filter - 5 \; }
-	for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
+	for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
 	nft add rule ip STUN BTTR_NOFT $OIFNAME ct mark $CTMARK accept
-	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . tcp dport @BTTR_HTTP counter ct mark set $CTMARK comment $OWNNAME
-	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . udp dport @BTTR_UDP counter ct mark set $CTMARK comment $OWNNAME
+	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . tcp dport @BTTR_HTTP counter ct mark set $CTMARK comment $NFTNAME
+	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . udp dport @BTTR_UDP counter ct mark set $CTMARK comment $NFTNAME
 	ps x | grep -q $CTMARK || nohup nftables_noft.sh $CTMARK &
 }
 
+# 无法复用端口时额外进行 DNAT
+[ $APPPORT = $LANPORT ] || (
+	[ $IFNAME ] && IIFNAME='iifname '$IFNAME''
+	nft add chain ip STUN DNAT { type nat hook prerouting priority dstnat \; }
+	nft add rule ip STUN DNAT $IIFNAME meta nfproto ipv4 tcp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
+	nft add rule ip STUN DNAT $IIFNAME meta nfproto ipv4 udp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
+)
+
 # 容器退出时清理 nftables 规则
-[ $StunHost = 1 ] && (ps x | grep -q $OWNNAME || nohup nftables_cleanup.sh $OWNNAME $CTMARK &)
+[ $StunHost = 1 ] && (ps x | grep -q $NFTNAME || nftables_exit.sh $NFTNAME 2>/dev/null &)
 
 >StunNftables
 LOG 更新 nftables 规则完成
