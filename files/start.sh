@@ -216,10 +216,9 @@ else
 	BC_BT_PORT_FLAG=1
 fi
 [ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=56082
-while \
-	# echo | timeout 1 socat - tcp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
-	# echo | timeout 1 socat - udp4:0.0.0.0:$BITCOMET_BT_PORT >/dev/null 2>&1 || \
-	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 /proc/net/udp /proc/net/udp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' && \
+while
+	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
+	awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' && \
 	echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort')$'
 do
 	export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1)
@@ -253,8 +252,7 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 	fi
 }
 
-# 初始化 STUN
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables
+# 更新 STUN 服务器列表
 [ "$STUN" = 0 ] || {
 	LOG 已启用 STUN，更新 STUN 服务器列表，最多等待 15 秒
 	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
@@ -266,31 +264,6 @@ rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables
 		LOG 更新 STUN 服务器列表失败，本次跳过
 		[ -f StunServers.txt ] || cp /files/StunServers.txt StunServers.txt
 	fi
-	[ $StunMode ] || LOG 未指定 STUN 穿透模式，自动设置
-	[ $StunMode ] && [[ ! "$StunMode" =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
-		LOG 错误的 STUN 穿透模式，重新设置
-		unset StunMode
-	}
-	[ $StunMode ] || \
-	if nft list tables >/dev/null 2>&1; then
-		LOG 已开启 NET_ADMIN 权限，使用 TCP 改包模式
-		export StunMode=nfttcp
-	else
-		LOG 未开启 NET_ADMIN 权限，使用 TCP 传统模式
-		export StunMode=tcp
-	fi
-	[[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1 && {
-		LOG 已指定 nftables 改包模式，但未开启 NET_ADMIN 权限；自动设置为传统模式
-		[[ $StunMode =~ ^nftudp$ ]] || export StunMode=tcp
-		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
-	}
-	[ $StunMode = tcp ] && LOG 当前使用 TCP 传统模式 && L4PROTO=tcp
-	[ $StunMode = udp ] && LOG 当前使用 UDP 传统模式 && L4PROTO=udp
-	[ $StunMode = nfttcp ] && LOG 当前使用 TCP 改包模式 && L4PROTO=tcp
-	[ $StunMode = nftudp ] && LOG 当前使用 UDP 改包模式 && L4PROTO=udp
-	[ $StunMode = nftboth ] && LOG 当前使用 TCP + UDP 改包模式 && L4PROTO=tcp
-	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
-	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
 }
 
 # 检测 NAT 映射行为
@@ -302,7 +275,7 @@ GET_NAT() {
 	else
 		local StunInterface=',interface='$StunInterface''
 	fi
-	for SERVER in $(sort -R /tmp/StunServers.txt); do
+	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
 		local IP=$(echo $SERVER | awk -F : '{print$1}')
 		local PORT=$(echo $SERVER | awk -F : '{print$2}')
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
@@ -312,45 +285,39 @@ GET_NAT() {
 			break
 		else
 			LOG STUN 服务器 $SERVER 不可用，后续排除
-			sed '/^'$SERVER'$/d' -i /tmp/StunServers.txt
+			sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
 		fi
 	done
 }
-[ "$STUN" = 0 ] || {
-	LOG 检测 NAT 映射行为
-	[ $StunInterface ] && [ ! $(ls /sys/class/net | grep ^$StunInterface$) ] && {
-		LOG STUN 绑定端口不存在，已忽略
-		unset StunInterface
-	}
-	cp -f StunServers.txt /tmp/StunServers.txt
-	LOG 已获取 $(wc -l < /tmp/StunServers.txt) 个 STUN 服务器
-	GET_NAT $BITCOMET_BT_PORT 1
-	[ $HEX1 ] && \
-	GET_NAT $BITCOMET_BT_PORT 2
+START_NAT() {
+	local L4PROTO=$1
+	LOG 检测 ${L4PROTO^^} 映射行为
+	sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
+	LOG 已获取 $(wc -l </tmp/StunServers_$L4PROTO.txt) 个 STUN 服务器
+	[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 1
+	[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
 		if [ ${HEX1:12:4} = ${HEX2:12:4} ]; then
 			if [ $((0x${HEX1:12:4}^0x2112)) = $BITCOMET_BT_PORT ]; then
-				LOG 内外端口一致，当前网络具备公网 IP
-				LOG 自动禁用 STUN，请自行开放端口
-				export STUN=0
+				LOG 内外端口一致，当前 ${L4PROTO^^} 为公网映射
+				eval STUN_FLAG_${L4PROTO^^}=0
 			else
-				LOG 两次端口一致，当前网络为锥形 NAT
-				LOG 保持启用 STUN
+				LOG 两次端口一致，当前 ${L4PROTO^^} 为锥形映射
+				eval STUN_FLAG_${L4PROTO^^}=1
 			fi
 		else
-			LOG 两次端口不同，额外检测两次
-			GET_NAT $BITCOMET_BT_PORT 3
-			GET_NAT $BITCOMET_BT_PORT 4
+			LOG 两次端口不同，进行额外检测
+			[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 3
+			[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 4
 			if [[ "${HEX3:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX4:12:4})$ ]] || [[ "${HEX4:12:4}" =~ ^(${HEX1:12:4}|${HEX2:12:4}|${HEX3:12:4})$ ]]; then
-				LOG 额外检测获得一致端口，请确认是否使用了策略分流或透明代理等
-				LOG 保持启用 STUN
+				LOG 额外检测获得一致端口，请确认是否使用了策略分流
+				eval STUN_FLAG_${L4PROTO^^}=1
 			else
-				LOG 多次端口不同，当前网络为对称形 NAT
-				LOG 自动禁用 STUN，请优化 NAT 类型后再尝试
-				export STUN=0
+				LOG 多次端口不同，当前 ${L4PROTO^^} 为对称映射
+				eval STUN_FLAG_${L4PROTO^^}=2
 			fi
 		fi
-		LOG 检测结果如下
+		LOG $BITCOMET_BT_PORT/$L4PROTO 的检测结果如下
 		LOG $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX1:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX1:12:4}^0x2112)) via $SERVER1
 		LOG $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX2:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX2:12:4}^0x2112)) via $SERVER2
 		[ $HEX3 ] && \
@@ -358,8 +325,75 @@ GET_NAT() {
 		[ $HEX4 ] && \
 		LOG $(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX4:16:8}^0x2112a442)) | sed 's/../0x& /g')):$((0x${HEX4:12:4}^0x2112)) via $SERVER4
 	else
-		LOG 检测 NAT 映射行为失败，本次跳过
+		LOG 检测 ${L4PROTO^^} 映射行为失败，本次跳过
 	fi
+}
+[ "$STUN" = 0 ] || {
+	[ "$StunInterface" ] && [ ! $(ls /sys/class/net | grep ^$StunInterface$) ] && {
+		LOG STUN 绑定接口不存在，已忽略
+		unset StunInterface
+	}
+	START_NAT tcp
+	unset HEX1 HEX2 HEX3 HEX4 SERVER1 SERVER2 SERVER3 SERVER4
+	START_NAT udp
+	[ "$STUN_FLAG_TCP" = 0 ] && [ "$STUN_FLAG_UDP" = 0 ] && {
+		LOG 当前网络为公网映射；自动禁用 STUN，请自行开放端口
+		export STUN=0
+	}
+	[ "$STUN_FLAG_TCP" = 2 ] && [ "$STUN_FLAG_UDP" = 2 ] && {
+		LOG 当前网络为锥形映射；自动禁用 STUN，请优化 NAT 类型后再尝试
+		export STUN=0
+	}
+}
+
+# 初始化 STUN
+rm -f StunPort* StunUpnpInterface StunNftables
+[ "$STUN" = 0 ] || {
+	[ "$StunMode" ] || LOG 未指定 STUN 穿透模式，自动设置
+	[ "$StunMode" ] && [[ ! $StunMode =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
+		LOG 错误的 STUN 穿透模式，重新设置
+		unset StunMode
+	}
+	[[ $StunMode =~ tcp|both ]] && [ "$STUN_FLAG_TCP" != 1 ] && {
+		LOG 当前 TCP 非锥形映射，重新设置
+		unset StunMode
+	}
+	[[ $StunMode =~ udp|both ]] && [ "$STUN_FLAG_UDP" != 1 ] && {
+		LOG 当前 UDP 非锥形映射，重新设置
+		unset StunMode
+	}
+	[[ $StunMode =~ nft ]] && ! nft list tables >/dev/null 2>&1 && {
+		LOG 已指定 nftables 改包模式，但未开启 NET_ADMIN 权限；自动设置为传统模式
+		[[ $StunMode =~ ^nftudp$ ]] || export StunMode=tcp
+		[[ $StunMode =~ ^nftudp$ ]] && export StunMode=udp
+	}
+	if [ $StunMode ]; then
+		[ $StunMode = tcp ] && LOG 当前使用 TCP 传统模式
+		[ $StunMode = udp ] && LOG 当前使用 UDP 传统模式
+		[ $StunMode = nfttcp ] && LOG 当前使用 TCP 改包模式
+		[ $StunMode = nftudp ] && LOG 当前使用 UDP 改包模式
+		[ $StunMode = nftboth ] && LOG 当前使用 TCP + UDP 改包模式
+	else
+		if nft list tables >/dev/null 2>&1; then
+			LOG 已开启 NET_ADMIN 权限，使用 TCP 改包模式
+			export StunMode=nfttcp
+		else
+			LOG 未开启 NET_ADMIN 权限，使用 TCP 传统模式
+			export StunMode=tcp
+		fi
+	fi
+	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
+	[ $StunHost = 0 ] && [[ ! $StunMode =~ nft ]] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
+	# 临时措施
+	[ $StunHost = 1 ] && [[ $StunMode =~ nft ]] && {
+		if [ "$StunModeLite" = 255 ]; then
+			LOG 强制开启 host 网络下的 HTTPS 改包，可能会影响其他程序的通信
+		else
+			LOG 目前 host 网络下的 HTTPS 改包可能会影响其他程序的通信，暂不启用
+			StunModeLite=1
+		fi
+	}
 }
 
 # 初始化 SSLproxy
@@ -403,63 +437,45 @@ GET_NAT() {
 	cp -f $STUN_ID.crt /usr/local/share/ca-certificates/
 	update-ca-certificates >/dev/null 2>&1
 	[ "$PBH" != 0 ] && {
-		keytool -delete -alias MITM -cacerts -storepass STUN_CA 2>/dev/null
-		keytool -importcert -trustcacerts -file $STUN_ID.crt -cacerts -alias MITM -storepass STUN_CA -noprompt >/dev/null
+		keytool -delete -alias MITM -cacerts -storepass STUN_CA >/dev/null 2>&1
+		keytool -importcert -trustcacerts -file $STUN_ID.crt -cacerts -alias MITM -storepass STUN_CA -noprompt >/dev/null 2>&1
 	}
 	sslproxy -d -u sslproxy -k $STUN_ID.key -c $STUN_ID.crt -P ssl 0.0.0.0 $StunMitmEnPort up:$StunMitmDePort
 	socat TCP-LISTEN:$StunMitmDePort,reuseport,fork EXEC:socat.sh &
 }
 
-# 执行 NATMap 及 BitComet
+# 执行 STUN 及 BitComet
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
 	# su - bitcomet -c '/files/BitComet/bin/bitcometd &'
 	/files/BitComet/bin/bitcometd &
 else
-	LOG 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为 NATMap 的绑定端口
+	LOG 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为穿透通道的本地端口
 	export StunBindPort=$BITCOMET_BT_PORT
-	[[ $StunMode =~ nft ]] || {
-		while (>/dev/tcp/0.0.0.0/$BITCOMET_BT_PORT) 2>/dev/null || echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunBindPort')$' ; do
-			export BITCOMET_BT_PORT=$(shuf -i 1024-65535 -n 1)
-		done
-	}
 	/files/BitComet/bin/bitcometd &
+	sleep 5
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
-	sleep 5
-	[ $StunServer ] || export StunServer=turn.cloudflare.com
-	[ $StunHttpServer ] || export StunHttpServer=qq.com
-	[ $StunInterval ] || export StunInterval=25
-	[ $StunInterface ] && export StunInterface='-i '$StunInterface''
-	LOG 本次 NATMap 执行命令
 	if [ $StunMode = nftboth ]; then
-		STUN_START_TCP='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
-		STUN_START_UDP='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
-		LOG $STUN_START_TCP
-		LOG $STUN_START_UDP
-		eval $STUN_START_TCP
-		eval $STUN_START_UDP
+		stun.sh tcp &
+		stun.sh udp &
 	else
-		[[ $StunMode =~ tcp ]] && \
-		STUN_START='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh'
-		[[ $StunMode =~ udp ]] && \
-		STUN_START='natmap '$StunArgs' -d -4 -s '$StunServer' -h '$StunHttpServer' -b '$StunBindPort' -k '$StunInterval' '$StunInterface' -e /files/natmap.sh -u'
-		LOG $STUN_START
-		eval $STUN_START
+		[[ $StunMode =~ tcp ]] && stun.sh tcp &
+		[[ $StunMode =~ udp ]] && stun.sh udp &
 	fi
 fi
 
 # 执行 PeerBanHelper
 if [ "$PBH" = 0 ]; then
 	LOG 已禁用 PeerBanHelper
-	exec sleep infinity
+	exec wait.sh
 else
-	LOG 已启用 PeerBanHelper，30 秒后启动
-	sleep 30
+	LOG 已启用 PeerBanHelper，60 秒后启动
+	sleep 60
 	( cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
 	grep -vE '(/|-)INFO' & )
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
-	exec sleep infinity
+	exec wait.sh
 fi
