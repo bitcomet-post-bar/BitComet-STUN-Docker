@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 防止脚本重复运行
-kill $(ps x | grep $0 | grep -v grep | awk '{print$1}' | grep -v $$) 2>/dev/null
+pkill -Af "$0 $*"
 
 CTMARK=$1
 TABLE=$(nft -st list ruleset | sed '/flow add @/q' | grep -oE '^table.*\{' | awk '{print$2,$3}' | tail -1)
