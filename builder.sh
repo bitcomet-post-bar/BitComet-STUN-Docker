@@ -5,11 +5,11 @@ apt-get update
 apt-get install -y curl jq unzip openjdk-21-jdk binutils
 
 # 下载 NATMap，识别对应的指令集架构
-case $ARCH in
-  x86_64) DL=x86_64;;
-  aarch64) DL=arm64;;
-esac
-curl -Lso /files/natmap https://github.com/heiher/natmap/releases/latest/download/natmap-linux-$DL
+# case $ARCH in
+#  x86_64) DL=x86_64;;
+#  aarch64) DL=arm64;;
+# esac
+# curl -Lso /files/natmap https://github.com/heiher/natmap/releases/latest/download/natmap-linux-$DL
 
 # 下载 PeerBanHelper
 VER=$(curl -s https://api.github.com/repos/PBH-BTN/PeerBanHelper/releases/latest | jq -r '.tag_name' | sed 's/^v//')
