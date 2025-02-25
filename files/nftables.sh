@@ -68,7 +68,7 @@ fi
 nft add set ip STUN BTTR_HTTP "{ type ipv4_addr . inet_service; flags dynamic; timeout 1h; }"
 nft add chain ip STUN BTTR_HTTP
 nft insert rule ip STUN BTTR ip daddr . tcp dport @BTTR_HTTP goto BTTR_HTTP
-nft add rule ip STUN BTTR meta l4proto tcp $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f add @BTTR_HTTP { ip daddr . tcp dport } goto BTTR_HTTP
+nft add rule ip STUN BTTR $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f add @BTTR_HTTP { ip daddr . tcp dport } goto BTTR_HTTP
 for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 for OFFSET in $($OFFSET_HTTP_SEQ); do
 	nft insert rule ip STUN BTTR_HTTP $OIFNAME $APPRULE $OFFSET_BASE,$OFFSET,80 $STRAPP $OFFSET_BASE,$(($OFFSET+32)),48 set $SETSTR counter accept comment $OWNNAME
@@ -86,7 +86,7 @@ fi
 nft add set ip STUN BTTR_UDP "{ type ipv4_addr . inet_service; flags dynamic; timeout 1h; }"
 nft add chain ip STUN BTTR_UDP
 nft insert rule ip STUN BTTR ip daddr . udp dport @BTTR_UDP goto BTTR_UDP
-nft add rule ip STUN BTTR meta l4proto udp $OFFSET_UDP_MAGIC 0x41727101980 $OFFSET_UDP_ACTION 0 add @BTTR_UDP { ip daddr . udp dport } goto BTTR_UDP
+nft add rule ip STUN BTTR $OFFSET_UDP_MAGIC 0x41727101980 $OFFSET_UDP_ACTION 0 add @BTTR_UDP { ip daddr . udp dport } goto BTTR_UDP
 for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
 nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_UDP_PORT $APPPORT $OFFSET_UDP_PORT set $SETNUM update @BTTR_UDP { ip daddr . udp dport } counter accept comment $OWNNAME
 
@@ -121,7 +121,7 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 			DOMAIN=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			[ $PORT ] || PORT=443
-			for IP in $(getent ahosts $DOMAIN | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | sort | uniq); do nft add element ip STUN BTTR_HTTPS { $IP . $PORT }; done
+			for IP in $(getent ahosts $DOMAIN | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | sort | uniq | grep -vE '(0.0.0.0|127.0.0.1)'); do nft add element ip STUN BTTR_HTTPS { $IP . $PORT }; done
 		else
 			LIST="$LIST"$'\n'$LINE
 		fi
@@ -133,6 +133,7 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 	nft add chain ip STUN MITM_OUTPUT { type nat hook output priority dstnat \; }
 	for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$OWNNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
 	nft insert rule ip STUN MITM_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $OWNNAME
+	nft insert rule ip STUN BTTR ip daddr 127.0.0.1 $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f goto BTTR_HTTP
 }
 
 # 绕过软件加速
