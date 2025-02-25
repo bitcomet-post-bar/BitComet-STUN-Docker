@@ -121,7 +121,10 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 			DOMAIN=$(echo $SERVER | awk -F : '{print$1}')
 			PORT=$(echo $SERVER | awk -F : '{print$2}')
 			[ $PORT ] || PORT=443
-			for IP in $(getent ahosts $DOMAIN | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | sort | uniq | grep -vE '(0.0.0.0|127.0.0.1)'); do nft add element ip STUN BTTR_HTTPS { $IP . $PORT }; done
+			for IP in $(getent ahosts $DOMAIN | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | sort | uniq); do
+				[[ $IP =~ 0\.0\.0\.0|127\.0\.0\.1 ]] && continue
+				nft add element ip STUN BTTR_HTTPS { $IP . $PORT }
+			done
 		else
 			LIST="$LIST"$'\n'$LINE
 		fi
