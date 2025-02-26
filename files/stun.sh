@@ -44,6 +44,7 @@ GET_NAT() {
 					continue
 				else
 					LOG 监听端口失败，停止容器 && kill 1 && exit
+				fi
 			}
 			STUN_PORT_FLAG=0
 		}
