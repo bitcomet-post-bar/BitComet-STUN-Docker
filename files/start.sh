@@ -264,6 +264,7 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 		LOG 更新 STUN 服务器列表失败，本次跳过
 		[ -f StunServers.txt ] || cp /files/StunServers.txt StunServers.txt
 	fi
+	LOG 已加载 $(wc -l <StunServers.txt) 个 STUN 服务器
 }
 
 # 检测 NAT 映射行为
@@ -293,7 +294,6 @@ START_NAT() {
 	local L4PROTO=$1
 	LOG 检测 ${L4PROTO^^} 映射行为
 	sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
-	LOG 已获取 $(wc -l </tmp/StunServers_$L4PROTO.txt) 个 STUN 服务器
 	[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 1
 	[ -s /tmp/StunServers_$L4PROTO.txt ] && GET_NAT $BITCOMET_BT_PORT 2
 	if [ $HEX1 ] && [ $HEX2 ]; then
