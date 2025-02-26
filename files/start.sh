@@ -391,7 +391,7 @@ rm -f StunPort* StunUpnpInterface StunNftables
 			LOG 强制开启 host 网络下的 HTTPS 改包，可能会影响其他程序的通信
 		else
 			LOG 目前 host 网络下的 HTTPS 改包可能会影响其他程序的通信，暂不启用
-			StunModeLite=1
+			export StunModeLite=1
 		fi
 	}
 }
