@@ -6,7 +6,7 @@ WANPORT=$2
 LANPORT=$3
 L4PROTO=$4
 
-APPPORT=$BITCOMET_BT_PORT
+APPPORT=$STUN_ORIG_PORT
 
 # 定义日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
