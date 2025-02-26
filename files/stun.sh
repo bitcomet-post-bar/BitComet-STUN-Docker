@@ -48,22 +48,6 @@ GET_NAT() {
 			STUN_PORT_FLAG=0
 		}
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:127.0.0.1:$STUN_BIND_PORT | xxd -p -c 0 | grep -oE '002000080001.{12}')
-		if echo $RES | tr -d ' ' | grep -q 4164647265737320616c726561647920696e20757365; then
-			let STUN_PORT_FLAG++
-			[ $STUN_PORT_FLAG -ge 10 ] && {
-				LOG 端口冲突次数达到上限，停止容器
-				kill -15 1
-				exit
-			}
-			if [[ $StunMode =~ nft ]]; then
-			export 
-			else
-				LOG 检测到端口冲突，请确保 $STUN_BIND_PORT/$L4PROTO 未被其他程序使用
-			fi
-			continue
-		else
-			STUN_PORT_FLAG=0
-		fi
 		if [ $HEX ]; then
 			[ ${HEX:12:4} = "${STUN_HEX:12:4}" ] && break
 			if [ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval*2)) ]; then
