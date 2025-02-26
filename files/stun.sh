@@ -39,7 +39,7 @@ GET_NAT() {
 		local PORT=$(echo $SERVER | awk -F : '{print$2}')
 		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>&1 | xxd -p -c 64)
 		echo $RES | tr -d ' ' | grep -q 4164647265737320616c726561647920696e20757365 && {
-			[ "$BC_BT_PORT_SHUF" -ge 10 ] && {
+			[ "$BC_BT_PORT_SHUF" = 10 ] && {
 				LOG 端口冲突次数达到上限，停止容器
 				kill -15 1
 				exit
