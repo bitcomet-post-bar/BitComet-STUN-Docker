@@ -468,7 +468,6 @@ fi
 # 执行 PeerBanHelper
 if [ "$PBH" = 0 ]; then
 	LOG 已禁用 PeerBanHelper
-	exec wait.sh
 else
 	LOG 已启用 PeerBanHelper，60 秒后启动
 	sleep 60
@@ -477,7 +476,6 @@ else
 	grep -vE '(/|-)INFO' & )
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
-	exec wait.sh
 fi
 
 # 后期处理
@@ -486,5 +484,4 @@ EXIT() {
 	kill -15 $(ps ax | awk '{print$1}' | grep -vE '^(PID|1)$') 2>/dev/null
 }
 trap EXIT SIGTERM
-sleep infinity &
-exec wait
+wait
