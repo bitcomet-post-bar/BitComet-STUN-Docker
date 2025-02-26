@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # 初始化变量
-[ $STUN ] && ([ $Stun ] || export Stun=$STUN)
 [ $BITCOMET_WEBUI_USERNAME ] && export WEBUI_USERNAME=$BITCOMET_WEBUI_USERNAME
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
 HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 | sort | uniq)
@@ -270,16 +269,8 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 # 检测 NAT 映射行为
 GET_NAT() {
 	LOG 使用 $1/$L4PROTO 进行第 $2 次绑定请求
-	[ $StunInterface ] && \
-	if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
-		local StunInterface=',bind='$StunInterface''
-	else
-		local StunInterface=',interface='$StunInterface''
-	fi
 	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
-		local IP=$(echo $SERVER | awk -F : '{print$1}')
-		local PORT=$(echo $SERVER | awk -F : '{print$2}')
-		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$IP:$PORT,reuseport,sourceport=$1$StunInterface 2>/dev/null | xxd -p -c 64 | grep -oE '002000080001.{12}')
+		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$SERVER,reuseport,sourceport=$1$STUN_IFACE 2>/dev/null | xxd -p -c 0 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$2=$HEX
 			eval SERVER$2=$SERVER
@@ -329,10 +320,20 @@ START_NAT() {
 	fi
 }
 [ "$STUN" = 0 ] || {
-	[ "$StunInterface" ] && [ ! $(ls /sys/class/net | grep ^$StunInterface$) ] && {
-		LOG STUN 绑定接口不存在，已忽略
-		unset StunInterface
+	[ "$StunInterface" ] && {
+		(ls /sys/class/net; echo "$HOSTIP") | grep -q ^$StunInterface$ || {
+			LOG STUN 绑定接口不存在，已忽略
+			unset StunInterface
+		}
 	}
+	[ $StunInterface ] && \
+	if [[ $StunInterface =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
+		export STUN_IFACE=',bind='$StunInterface''
+		export STUN_IFACE_IP=1
+	else
+		export STUN_IFACE=',interface='$StunInterface''
+		export STUN_IFACE_IF=1
+	fi
 	START_NAT tcp
 	unset HEX1 HEX2 HEX3 HEX4 SERVER1 SERVER2 SERVER3 SERVER4
 	START_NAT udp
@@ -382,7 +383,10 @@ rm -f StunPort* StunUpnpInterface StunNftables
 			export StunMode=tcp
 		fi
 	fi
-	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && {
+		[ $StunInterface ] && LOG 指定网络接口时，HTTPS 改包不生效；自动更改为轻量模式 && export StunModeLite=1
+		[ $StunInterface ] || LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	}
 	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
 	[ $StunHost = 0 ] && [[ ! $StunMode =~ nft ]] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
 	# 临时措施
@@ -451,7 +455,12 @@ if [ "$STUN" = 0 ]; then
 	/files/BitComet/bin/bitcometd &
 else
 	LOG 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为穿透通道的本地端口
-	export StunBindPort=$BITCOMET_BT_PORT
+	export STUN_ORIG_PORT=$BITCOMET_BT_PORT
+	[[ $StunMode =~ nft ]] || while
+		awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
+		awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
+		echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort'|'$STUN_ORIG_PORT')$'
+	do export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1); done
 	/files/BitComet/bin/bitcometd &
 	sleep 5
 	LOG BitComet 已启动，使用以下地址访问 WebUI
