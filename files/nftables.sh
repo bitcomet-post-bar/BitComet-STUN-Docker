@@ -6,14 +6,9 @@ WANPORT=$2
 LANPORT=$3
 L4PROTO=$4
 
-APPPORT=$BITCOMET_BT_PORT
-NFTNAME=Docker_BitComet_$LANPORT
-[ "$StunInterface" ] && \
-if [[ "$StunInterface" =~ ([0-9]{1,3}\.){3}[0-9]{1,3} ]]; then
-	LOG nftables 不支持 IP 形式 $(echo $StunInterface | awk '{print$2}') 绑定接口，已忽略
-else
-	IFNAME=$(echo $StunInterface | awk '{print$NF}')
-fi
+APPPORT=$STUN_ORIG_PORT
+NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
+[ $STUN_IFACE_IF ] && IFNAME=$StunInterface
 
 # 定义日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
@@ -26,7 +21,7 @@ pkill -Af "$0 $*"
 LOG nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
-[ $L4PROTO = udp ] && while ps x | grep $0 | grep -q tcp; do sleep 1; done
+[ $L4PROTO = udp ] && while pgrep -f $0.+tcp >/dev/null; do sleep 1; done
 
 # 初始化 nftables
 nft add table ip STUN
@@ -37,7 +32,8 @@ WANUDP=$(awk '{print$1}' StunPort_udp 2>/dev/null)
 [ $IFNAME ] && OIFNAME='oifname '$IFNAME''
 # BitComet 目前指定 UID 会导致无法热更新端口
 # APPRULE='skuid 56082'
-APPRULE='fib saddr type local'
+[ $STUN_IFACE_IP ] && APPRULE='ip saddr '$StunInterface''
+[ $STUN_IFACE_IP ] || APPRULE='fib saddr type local'
 if nft -c add rule ip STUN BTTR @ih,0,16 0 2>/dev/null; then
 	OFFSET_BASE='@ih'
 	OFFSET_HTTP_GET='@ih,0,112'
@@ -147,22 +143,14 @@ nft -st list ruleset 2>/dev/null | grep -q @ft && {
 	CTMARK=0x$(echo $NFTNAME | md5sum | cut -c -8)
 	nft add chain ip STUN BTTR_NOFT { type filter hook forward priority filter - 5 \; }
 	for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
-	nft add rule ip STUN BTTR_NOFT $OIFNAME ct mark $CTMARK accept
+	nft add rule ip STUN BTTR_NOFT $OIFNAME ct mark $CTMARK accept comment $NFTNAME
 	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . tcp dport @BTTR_HTTP counter ct mark set $CTMARK comment $NFTNAME
 	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . udp dport @BTTR_UDP counter ct mark set $CTMARK comment $NFTNAME
 	ps x | grep -q $CTMARK || nohup nftables_noft.sh $CTMARK &
 }
 
-# 无法复用端口时额外进行 DNAT
-[ $APPPORT = $LANPORT ] || (
-	[ $IFNAME ] && IIFNAME='iifname '$IFNAME''
-	nft add chain ip STUN DNAT { type nat hook prerouting priority dstnat - 5 \; }
-	nft add rule ip STUN DNAT $IIFNAME tcp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
-	nft add rule ip STUN DNAT $IIFNAME udp dport $LANPORT counter redirect to :$APPPORT comment $NFTNAME
-)
-
 # 容器退出时清理 nftables 规则
-[ $StunHost = 1 ] && (ps x | grep -q $NFTNAME || nftables_exit.sh $NFTNAME 2>/dev/null &)
+[ $StunHost = 1 ] && (pgrep -f $NFTNAME >/dev/null || nftables_exit.sh 2>/dev/null &)
 
 >StunNftables
 LOG 更新 nftables 规则完成
