@@ -218,7 +218,7 @@ fi
 [ $BC_BT_PORT_FLAG ] && export BITCOMET_BT_PORT=56082
 while
 	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
-	awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' && \
+	awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
 	echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort')$'
 do
 	export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1)
