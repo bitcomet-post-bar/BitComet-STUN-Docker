@@ -479,3 +479,12 @@ else
 	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
 	exec wait.sh
 fi
+
+# 后期处理
+EXIT() {
+	LOG 正在停止容器
+	kill -15 $(ps ax | awk '{print$1}' | grep -vE '^(PID|1)$') 2>/dev/null
+}
+trap EXIT SIGTERM
+sleep infinity &
+exec wait
