@@ -44,7 +44,7 @@ GET_NAT() {
 				kill -15 1
 				exit
 			}
-			LOG 端口复用权限不足，修改 BitComet BT 端口
+			LOG 检测到端口冲突，修改 BitComet BT 端口
 			while
 				awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
 				awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
