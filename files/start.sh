@@ -490,6 +490,10 @@ fi
 # 后期处理
 EXIT() {
 	LOG 正在停止容器
+	pkill -f stun.sh
+	pkill -f stun_exec.sh
+	pkill -f nftables.sh
+	pkill -f nftables_noft.sh
 	pkill -f nftables_exit.sh
 	sleep 5
 	pkill -f bitcometd
