@@ -348,7 +348,7 @@ START_NAT() {
 }
 
 # 初始化 STUN
-rm -f StunPort* StunUpnpInterface StunNftables
+rm -f StunPort* StunUpnpInterface
 [ "$STUN" = 0 ] || {
 	[ "$StunMode" ] || LOG 未指定 STUN 穿透模式，自动设置
 	[ "$StunMode" ] && [[ ! $StunMode =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
@@ -490,7 +490,9 @@ fi
 # 后期处理
 EXIT() {
 	LOG 正在停止容器
-	kill -15 $(ps ax | awk '{print$1}' | grep -vE '^(PID|1)$') 2>/dev/null
+	pkill -f nftables_exit.sh
+	sleep 5
+	pkill -f bitcometd
 }
 trap EXIT SIGTERM
 wait
