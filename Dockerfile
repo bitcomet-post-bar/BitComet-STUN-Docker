@@ -17,7 +17,7 @@ RUN chmod +x /files/* && \
     rm -rf /var/lib/apt/lists/* && \
     useradd socat -u 50080 -d /nonexistent -s /usr/sbin/nologin && \
     useradd sslproxy -u 58443 -d /nonexistent -s /usr/sbin/nologin && \
-    useradd bitcomet -u 56082 -m -s /bin/bash && \
+    useradd bitcomet -u 56082 -g 0 -m -s /bin/bash && \
     mkdir /home/bitcomet/.config && \
     ln -s /BitComet /home/bitcomet/.config/BitComet && \
     ln -s /Downloads /home/bitcomet/Downloads && \
