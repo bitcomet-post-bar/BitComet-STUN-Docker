@@ -14,7 +14,7 @@ pkill -Af "$0 $*"
 UPDATE_HTTP() {
 	LOG 已启用 TCP 通道，更新 HTTP 服务器列表，最多等待 15 秒
 	echo -ne "GET /topsite_ip.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
-	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/SiteList.txt
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' >/tmp/SiteList.txt
 	if [ -s /tmp/SiteList.txt ]; then
 		LOG 更新 HTTP 服务器列表成功
 		mv -f /tmp/SiteList.txt SiteList.txt
@@ -22,8 +22,8 @@ UPDATE_HTTP() {
 		LOG 更新 HTTP 服务器列表失败，本次跳过
 		[ -f SiteList.txt ] || cp /files/SiteList.txt SiteList.txt
 	fi
-	sort -R SiteList.txt >/tmp/SiteList_$L4PROTO.txt
-	LOG 已加载 $(wc -l </tmp/SiteList_$L4PROTO.txt) 个 HTTP 服务器
+	sort -R SiteList.txt >/tmp/SiteList_tcp.txt
+	LOG 已加载 $(wc -l </tmp/SiteList_tcp.txt) 个 HTTP 服务器
 }
 
 # 更新 STUN 服务器
@@ -39,7 +39,7 @@ UPDATE_STUN() {
 		[ -f StunServers.txt ] || cp /files/StunServers.txt StunServers.txt
 	fi
 	sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
-	LOG 已获取 $(wc -l </tmp/StunServers_$L4PROTO.txt) 个 STUN 服务器
+	LOG 已加载 $(wc -l </tmp/StunServers_$L4PROTO.txt) 个 STUN 服务器
 }
 
 # 穿透通道检测
@@ -110,9 +110,9 @@ if [[ $StunMode =~ nft ]]; then
 	[ $STUN_IFACE_IP ] || APPRULE='ip daddr != 127.0.0.1'
 	[ $STUN_IFACE_IF ] && OIFNAME='oifname '$StunInterface''
 	nft add table ip STUN
-	nft add chain ip STUN MARK { type nat hook output priority filter \; }
-	for HANDLE in $(nft -as list chain ip STUN MARK | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN MARK handle $HANDLE; done
-	nft insert rule ip STUN MARK skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter ct mark set 0x50080 comment $NFTNAME
+	nft add chain ip STUN HOOK { type nat hook output priority dstnat \; }
+	for HANDLE in $(nft -as list chain ip STUN HOOK | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN HOOK handle $HANDLE; done
+	nft insert rule ip STUN HOOK skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter ct mark set 0x50080 comment $NFTNAME
 	nft add chain ip STUN SNAT { type nat hook postrouting priority srcnat - 5 \; }
 	for HANDLE in $(nft -as list chain ip STUN SNAT | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN SNAT handle $HANDLE; done
 	nft insert rule ip STUN SNAT meta l4proto $L4PROTO ct mark 0x50080 counter snat to :$STUN_ORIG_PORT comment $NFTNAME
@@ -123,7 +123,7 @@ fi
 # 执行 STUN
 while :; do
 	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_STUN
-	[ $L4PROTO = tcp ] && [ ! -s /tmp/SiteList_$L4PROTO.txt ] && UPDATE_HTTP
+	[ $L4PROTO = tcp ] && [ ! -s /tmp/SiteList_tcp.txt ] && UPDATE_HTTP
 	GET_NAT
 	[ $L4PROTO = tcp ] && KEEPALIVE
 	sleep $(($StunInterval/$STUN_TIME_FLAG))
