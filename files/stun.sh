@@ -107,7 +107,7 @@ if [[ $StunMode =~ nft ]]; then
 	STUN_BIND_PORT=$(shuf -i 1024-65535 -n 1)
 	NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 	[ $STUN_IFACE_IP ] && APPRULE='ip saddr '$StunInterface''
-	[ $STUN_IFACE_IP ] || APPRULE='ip daddr != 127.0.0.1'
+	[ $STUN_IFACE_IP ] || APPRULE='fib daddr type != local'
 	[ $STUN_IFACE_IF ] && OIFNAME='oifname '$StunInterface''
 	nft add table ip STUN
 	nft add chain ip STUN HOOK { type nat hook output priority dstnat \; }
