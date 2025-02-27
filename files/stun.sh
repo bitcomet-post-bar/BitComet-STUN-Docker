@@ -87,11 +87,11 @@ GET_NAT() {
 
 # 穿透通道保活
 KEEPALIVE() {
-	for SERVER in $(tr -d '\r' </tmp/SiteList.txt); do
+	for SERVER in $(cat /tmp/SiteList_$L4PROTO.txt); do
 		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- timeout 2 socat - tcp4:$SERVER:80,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
-		sed '/^'$SERVER'$/d' -i /tmp/SiteList.txt
 		echo "$RES" | grep -q HTTP && break
 		let STUN_HTTP_FLAG++
+		sed '/^'$SERVER'$/d' -i /tmp/SiteList_$L4PROTO.txt
 		[ $STUN_HTTP_FLAG -ge 10 ] && LOG HTTP 保活连续失败 10 次，本次跳过 && break
 	done
 	unset STUN_HTTP_FLAG
