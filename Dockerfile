@@ -27,7 +27,7 @@ RUN chmod +x /files/* && \
     # ln -s /PeerBanHelper /PBHDIR
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files/StunServers.txt
 ADD https://oniicyan.pages.dev/https_trackers.txt /files/HttpsTrackers.txt
-ADD https://oniicyan.pages.dev/topsites_cn.txt /files/SiteList.txt
+ADD https://oniicyan.pages.dev/topsite.txt /files/SiteList.txt
 CMD ["start.sh"]
 
 LABEL org.opencontainers.image.source="https://github.com/bitcomet-post-bar/BitComet-STUN-Docker" \
