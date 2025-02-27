@@ -394,15 +394,6 @@ rm -f StunPort* StunUpnpInterface
 	}
 	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
 	[ $StunHost = 0 ] && [[ ! $StunMode =~ nft ]] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
-	# 临时措施
-	[ $StunHost = 1 ] && [[ $StunMode =~ nft ]] && {
-		if [ "$StunModeLite" = 255 ]; then
-			LOG 强制开启 host 网络下的 HTTPS 改包，可能会影响其他程序的通信
-		else
-			LOG 目前 host 网络下的 HTTPS 改包可能会影响其他程序的通信，暂不启用
-			export StunModeLite=1
-		fi
-	}
 }
 
 # 初始化 SSLproxy
