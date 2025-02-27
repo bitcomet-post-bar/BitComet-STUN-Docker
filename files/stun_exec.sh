@@ -22,7 +22,7 @@ touch /BitComet/DockerStun.log
 echo $WANPORT $LANPORT >StunPort_$L4PROTO
 
 # 传统模式
-[[ $StunMode =~ ^(tcp|udp)$ ]] && {
+[[ $StunMode =~ nft ]] || {
 	echo [$(date)] $WANADDR:$WANPORT '->' :$LANPORT '->' :$WANPORT >>/BitComet/DockerStun.log
 	LOG 当前为传统模式，更新 BitComet 监听端口
 	/files/BitComet/bin/bitcometd --bt_port $WANPORT >/dev/null
@@ -30,11 +30,7 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 
 # 改包模式
 [[ $StunMode =~ nft ]] && {
-	if [ $APPPORT = $LANPORT ]; then
-		echo [$(date)] $WANADDR:$WANPORT '->' :$APPPORT >>/BitComet/DockerStun.log
-	else
-		echo [$(date)] $WANADDR:$WANPORT '->' :$LANPORT '->' :$APPPORT >>/BitComet/DockerStun.log
-	fi
+	echo [$(date)] $WANADDR:$WANPORT '->' :$APPPORT >>/BitComet/DockerStun.log
 	LOG 当前为改包模式，更新 nftables 规则
 	nftables.sh $@
 }
@@ -56,9 +52,14 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		[ $UPNP_FLAG = 0 ] && LOG 更新 UPnP 规则成功
 	}
 	[ -f StunUpnpInterface ] && export StunUpnpInterface='br-lan'
-	UPNP_EXPORT=$LANPORT
-	[[ $StunMode =~ ^(tcp|udp)$ ]] && UPNP_INPORT=$WANPORT
-	[[ $StunMode =~ nft ]] && UPNP_INPORT=$LANPORT
+	[[ $StunMode =~ nft ]] || {
+		UPNP_INPORT=$WANPORT
+		UPNP_EXPORT=$LANPORT
+	}
+	[[ $StunMode =~ nft ]] && {
+		UPNP_INPORT=$APPPORT
+		UPNP_EXPORT=$APPPORT
+	}
 	LOG 本次 UPnP 规则：转发 外部端口 $UPNP_EXPORT/$L4PROTO 至 内部端口 $UPNP_INPORT/$L4PROTO
 	ADD_UPNP
 	[ $UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && [ "$StunUpnpInterface" != '-m br-lan' ] && \
