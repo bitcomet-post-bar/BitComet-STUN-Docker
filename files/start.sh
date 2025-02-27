@@ -18,6 +18,7 @@ for DIR in /BitComet /PeerBanHelper; do
 		[ -d $DIR ] || mkdir $DIR
 	fi
 done
+chmod 775 /BitComet
 mv -f /BitComet/DockerLogs.log /BitComet/DockerLogs.old 2>/dev/null
 mv -f /tmp/DockerLogs.log /BitComet/DockerLogs.log
 [ $DIR_CFG_FLAG ] && LOG 应用程序配置及数据保存到容器层，重启后可能会丢失
@@ -39,11 +40,15 @@ else
 	LOG /Downloads 目录未挂载，默认保存位置在容器层，重启后可能会丢失
 	BC_DL_FLAG=1
 fi
+chmod 775 /BitComet
 BC_DL_REX='/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts'
 BC_DL_DIR=$(mount | grep -E '^/' | grep -vE ' ('$BC_DL_REX') ' | awk '{print$3}')
 if [ $BC_DL_DIR ]; then
 	LOG 以下目录将作为 BitComet 的自定义保存位置
-	for DIR in $BC_DL_DIR; do LOG $DIR; done
+	for DIR in $BC_DL_DIR; do
+		LOG $DIR
+		chmod 775 $DIR
+	done
 	sed 's,<Settings>,<Settings><DirCandidate>'$(echo $BC_DL_DIR | sed 's, /,|/,')'</DirCandidate>,' -i $BC_CFG
 else
 	[ $BC_DL_FLAG ] && LOG 未挂载任何自定义下载目录
@@ -451,7 +456,6 @@ rm -f StunPort* StunUpnpInterface
 # 执行 STUN 及 BitComet
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
-	# su - bitcomet -c '/files/BitComet/bin/bitcometd &'
 	/files/BitComet/bin/bitcometd &
 else
 	LOG 已启用 STUN，BitComet BT 端口 $BITCOMET_BT_PORT 将作为穿透通道的本地端口
@@ -461,7 +465,8 @@ else
 		awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
 		echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort'|'$STUN_ORIG_PORT')$'
 	do export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1); done
-	/files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
 	sleep 5
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
