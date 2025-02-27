@@ -353,7 +353,7 @@ START_NAT() {
 }
 
 # 初始化 STUN
-rm -f StunPort* StunUpnpInterface
+rm -f StunPort* StunUpnpInterface StunNftables StunHttpsTrackers
 [ "$STUN" = 0 ] || {
 	[ "$StunMode" ] || LOG 未指定 STUN 穿透模式，自动设置
 	[ "$StunMode" ] && [[ ! $StunMode =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
