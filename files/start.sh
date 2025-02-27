@@ -274,7 +274,7 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 # 检测 NAT 映射行为
 GET_NAT() {
 	LOG 使用 $1/$L4PROTO 进行第 $2 次绑定请求
-	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
+	for SERVER in $(sort -R /tmp/StunServers_$L4PROTO.txt); do
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:$SERVER,reuseport,sourceport=$1$STUN_IFACE 2>/dev/null | xxd -p -c 0 | grep -oE '002000080001.{12}')
 		if [ $HEX ]; then
 			eval HEX$2=$HEX
