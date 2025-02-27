@@ -10,8 +10,24 @@ LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 # 防止脚本重复运行
 pkill -Af "$0 $*"
 
-# 更新服务器
-UPDATE_SERVERS() {
+# 更新 HTTP 服务器
+UPDATE_HTTP() {
+	LOG 已启用 TCP 通道，更新 HTTP 服务器列表，最多等待 15 秒
+	echo -ne "GET /topsite_ip.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
+	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/SiteList.txt
+	if [ -s /tmp/SiteList.txt ]; then
+		LOG 更新 HTTP 服务器列表成功
+		mv -f /tmp/SiteList.txt SiteList.txt
+	else
+		LOG 更新 HTTP 服务器列表失败，本次跳过
+		[ -f SiteList.txt ] || cp /files/SiteList.txt SiteList.txt
+	fi
+	sort -R SiteList.txt >/tmp/SiteList_$L4PROTO.txt
+	LOG 已加载 $(wc -l </tmp/SiteList_$L4PROTO.txt) 个 HTTP 服务器
+}
+
+# 更新 STUN 服务器
+UPDATE_STUN() {
 	LOG 更新 STUN 服务器列表，最多等待 15 秒
 	echo -ne "GET /stun_servers_ipv4_rst.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
 	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}' >/tmp/StunServers.txt
@@ -71,15 +87,14 @@ GET_NAT() {
 
 # 穿透通道保活
 KEEPALIVE() {
-	[ -s /tmp/SiteList.txt ] || sort -R /files/SiteList.txt >/tmp/SiteList.txt
-	STUN_HTTP=0
 	for SERVER in $(tr -d '\r' </tmp/SiteList.txt); do
 		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- timeout 2 socat - tcp4:$SERVER:80,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
 		sed '/^'$SERVER'$/d' -i /tmp/SiteList.txt
 		echo "$RES" | grep -q HTTP && break
-		let STUN_HTTP++
-		[ $STUN_HTTP -ge 10 ] && LOG HTTP 保活连续失败 10 次，本次跳过 && break
+		let STUN_HTTP_FLAG++
+		[ $STUN_HTTP_FLAG -ge 10 ] && LOG HTTP 保活连续失败 10 次，本次跳过 && break
 	done
+	unset STUN_HTTP_FLAG
 }
 
 # 初始化 STUN
@@ -107,7 +122,8 @@ fi
 
 # 执行 STUN
 while :; do
-	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_SERVERS
+	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_STUN
+	[ $L4PROTO = tcp ] && [ ! -s /tmp/SiteList_$L4PROTO.txt ] && UPDATE_HTTP
 	GET_NAT
 	[ $L4PROTO = tcp ] && KEEPALIVE
 	sleep $(($StunInterval/$STUN_TIME_FLAG))
