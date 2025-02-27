@@ -26,7 +26,7 @@ UPDATE_SERVERS() {
 	LOG 已获取 $(wc -l </tmp/StunServers_$L4PROTO.txt) 个 STUN 服务器
 }
 
-# 检测穿透通道
+# 穿透通道检测
 GET_NAT() {
 	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
 		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- timeout 2 socat - ${L4PROTO}4:$SERVER,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0 | grep -oE '002000080001.{12}')
@@ -43,7 +43,7 @@ GET_NAT() {
 			break
 		}
 		unset STUN_PORT_FLAG
-		if [ $HEX ]; then
+		[ $HEX ] && {
 			[ ${HEX:12:4} = "${STUN_HEX:12:4}" ] && break
 			[ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval/$STUN_TIME_FLAG*2)) ] && {
 				LOG 穿透通道保持时间低于 $(($StunInterval/$STUN_TIME_FLAG*2)) 秒（两次心跳间隔）
@@ -63,10 +63,20 @@ GET_NAT() {
 			STUN_TIME=$(date +%s)
 			stun_exec.sh $STUN_IP $STUN_PORT $STUN_BIND_PORT $L4PROTO &
 			break
-		else
-			LOG STUN 服务器 $SERVER 不可用，后续排除
-			sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
-		fi
+		}
+		LOG STUN 服务器 $SERVER 不可用，后续排除
+		sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
+	done
+}
+
+# 穿透通道保活
+KEEPALIVE() {
+	[ -s /tmp/SiteList.txt ] || sort -R /files/SiteList.txt >/tmp/SiteList.txt
+	for SERVER in $(cat /tmp/SiteList.txt); do
+		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- timeout 2 socat - tcp4:$SERVER:80,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
+		echo "$RES" | grep -q HTTP && break
+		LOG HTTP 服务器 $SERVER 不可用，后续排除
+		sed '/^'$SERVER'$/d' -i /tmp/SiteList.txt
 	done
 }
 
@@ -97,5 +107,6 @@ fi
 while :; do
 	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_SERVERS
 	GET_NAT
+	[ $L4PROTO = tcp ] && KEEPALIVE
 	sleep $(($StunInterval/$STUN_TIME_FLAG))
 done
