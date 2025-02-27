@@ -136,9 +136,9 @@ UPDATE_HTTPS() {
 	[ $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) = 0 ] && UPDATE_HTTPS
 	[ -f StunHttpsTrackers ] || UPDATE_HTTPS
 	[ $(($(date +%s)-$(cat StunHttpsTrackers))) -gt 3600 ] && UPDATE_HTTPS
-	nft add chain ip STUN HOOK { type nat hook output priority dstnat \; }
-	for HANDLE in $(nft -as list chain ip STUN HOOK | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN HOOK handle $HANDLE; done
-	nft insert rule ip STUN HOOK $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
+	nft add chain ip STUN NAT_OUTPUT { type nat hook output priority dstnat \; }
+	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
+	nft insert rule ip STUN NAT_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
 	nft insert rule ip STUN BTTR ip daddr 127.0.0.1 $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f goto BTTR_HTTP
 }
 
