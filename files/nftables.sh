@@ -17,7 +17,7 @@ LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 pkill -Af "$0 $*"
 
 # 若规则未发生变化，则退出脚本
-nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
+[ -f StunNftables ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
 LOG nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
@@ -84,7 +84,7 @@ for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{
 nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_UDP_PORT $APPPORT $OFFSET_UDP_PORT set $SETNUM update @BTTR_UDP { ip daddr . udp dport } counter accept comment $NFTNAME
 
 # HTTPS Trackers
-[ $StunModeLite ] || {
+UPDATE_HTTPS() {
 	LOG 获取 HTTPS Tracker 列表，最多等待 15 秒
 	echo -ne "GET /https_trackers.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
 	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -oE 'https://.*' >/tmp/HttpsTrackers.txt
@@ -129,6 +129,13 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 		LOG 以下自定义 HTTPS Tracker 格式不正确，已忽略
 		LOG "$(echo "$LIST" | sed '/^$/d')"
 	}
+	LOG 已加载 $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) 个 HTTPS Tracker
+	echo $(date +%s) >StunHttpsTrackers
+}
+[ $StunModeLite ] || {
+	[ $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) = 0 ] && UPDATE_HTTPS
+	[ -f StunHttpsTrackers ] || UPDATE_HTTPS
+	[ $(($(date +%s)-$(cat StunHttpsTrackers))) -gt 3600 ] && UPDATE_HTTPS
 	nft add chain ip STUN HOOK { type nat hook output priority dstnat \; }
 	for HANDLE in $(nft -as list chain ip STUN HOOK | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN HOOK handle $HANDLE; done
 	nft insert rule ip STUN HOOK $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
@@ -146,6 +153,7 @@ nft -st list ruleset 2>/dev/null | grep -q @ft && {
 	pgrep -f $CTMARK >/dev/null || nohup nftables_noft.sh $CTMARK &
 }
 
+>StunNftables
 LOG 更新 nftables 规则完成
 
 # 容器退出时清理 nftables 规则
