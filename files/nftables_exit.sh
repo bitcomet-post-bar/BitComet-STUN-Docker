@@ -10,13 +10,13 @@ CLEANUP() {
 	for HANDLE in $(nft -as list chain ip STUN SNAT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN SNAT handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
-	nft list chain ip STUN MARK | grep -qvE '[{}]$' || nft delete chain ip STUN MARK
-	nft list chain ip STUN SNAT | grep -qvE '[{}]$' ] || nft delete chain ip STUN SNAT
-	nft list chain ip STUN BTTR_HTTP | grep -qvE '[{}]$' || nft delete chain ip STUN BTTR_HTTP
-	nft list chain ip STUN BTTR_UDP | grep -qvE '[{}]$' ] || nft delete chain ip STUN BTTR_UDP
+	nft list chain ip STUN MARK | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN MARK
+	nft list chain ip STUN SNAT | grep -qvE '[{}]$|policy accept' ] || nft delete chain ip STUN SNAT
+	nft list chain ip STUN BTTR_HTTP | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN BTTR_HTTP
+	nft list chain ip STUN BTTR_UDP | grep -qvE '[{}]$|policy accept' ] || nft delete chain ip STUN BTTR_UDP
 	[ $StunModeLite ] || {
 		for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
-		nft list chain ip STUN MITM_OUTPUT | grep -qvE '[{}]$' || {
+		nft list chain ip STUN MITM_OUTPUT | grep -qvE '[{}]$|policy accept' || {
 			nft delete chain ip STUN MITM_OUTPUT
 			nft delete set ip STUN BTTR_HTTPS
 		}
