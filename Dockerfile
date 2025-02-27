@@ -24,7 +24,7 @@ RUN chmod +x /files/* && \
     mkdir /root/.config && \
     ln -s /BitComet /root/.config/BitComet && \
     ln -s /Downloads /root/Downloads && \
-    ln -s /PeerBanHelper /PBHDIR
+    # ln -s /PeerBanHelper /PBHDIR
 ADD https://oniicyan.pages.dev/stun_servers_ipv4_rst.txt /files/StunServers.txt
 ADD https://oniicyan.pages.dev/https_trackers.txt /files/HttpsTrackers.txt
 CMD ["start.sh"]
