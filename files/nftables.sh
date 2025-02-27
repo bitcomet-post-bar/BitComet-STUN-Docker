@@ -30,10 +30,7 @@ nft flush chain ip STUN BTTR
 WANTCP=$(awk '{print$1}' StunPort_tcp 2>/dev/null)
 WANUDP=$(awk '{print$1}' StunPort_udp 2>/dev/null)
 [ $IFNAME ] && OIFNAME='oifname '$IFNAME''
-# BitComet 目前指定 UID 会导致无法热更新端口
-# APPRULE='skuid 56082'
-[ $STUN_IFACE_IP ] && APPRULE='ip saddr '$StunInterface''
-[ $STUN_IFACE_IP ] || APPRULE='fib saddr type local'
+APPRULE='skuid 56082'
 if nft -c add rule ip STUN BTTR @ih,0,16 0 2>/dev/null; then
 	OFFSET_BASE='@ih'
 	OFFSET_HTTP_GET='@ih,0,112'
@@ -132,9 +129,9 @@ nft insert rule ip STUN BTTR_UDP $OIFNAME $APPRULE $OFFSET_UDP_ACTION 1 $OFFSET_
 		LOG 以下自定义 HTTPS Tracker 格式不正确，已忽略
 		LOG "$(echo "$LIST" | sed '/^$/d')"
 	}
-	nft add chain ip STUN MITM_OUTPUT { type nat hook output priority dstnat \; }
-	for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
-	nft insert rule ip STUN MITM_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
+	nft add chain ip STUN HOOK { type nat hook output priority dstnat \; }
+	for HANDLE in $(nft -as list chain ip STUN HOOK | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN HOOK handle $HANDLE; done
+	nft insert rule ip STUN HOOK $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
 	nft insert rule ip STUN BTTR ip daddr 127.0.0.1 $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f goto BTTR_HTTP
 }
 
