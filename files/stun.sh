@@ -29,41 +29,34 @@ UPDATE_SERVERS() {
 # 检测穿透通道
 GET_NAT() {
 	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
-		pgrep -f socat.+$L4PROTO.+$L4PROTO >/dev/null || {
-			LOG socat 监听端口 $STUN_BIND_PORT/$L4PROTO，使用 STUN 服务器 $SERVER
-			socat ${L4PROTO}4-listen:$STUN_BIND_PORT,reuseport,fork ${L4PROTO}4:$SERVER,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>/tmp/socat_$L4PROTO.txt &
-			grep -q 'Address already in use' /tmp/socat_$L4PROTO.txt && {
-				if [[ $StunMode =~ nft ]]; then
-					let STUN_PORT_FLAG++
-					[ $STUN_PORT_FLAG -ge 10 ] && LOG 监听端口失败次数达到上限，停止容器 && kill 1 && exit
-					LOG 监听端口失败，尝试使用其他端口
-					pkill -9 -f socat.+$L4PROTO.+$L4PROTO
-					STUN_BIND_PORT=$(shuf -i 1024-65535 -n 1)
-					for HANDLE in $(nft -as list chain ip STUN SNAT | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN SNAT handle $HANDLE; done
-					nft insert rule ip STUN SNAT skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter snat to :$STUN_ORIG_PORT comment $NFTNAME
-					continue
-				else
-					LOG 监听端口失败，停止容器 && kill 1 && exit
-				fi
+		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- timeout 2 socat - ${L4PROTO}4:$SERVER,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0 | grep -oE '002000080001.{12}')
+		local HEX=$(echo $RES | grep -oE '002000080001.{12}')
+		echo $RES | grep -q 4164647265737320616c726561647920696e20757365 && {
+			let STUN_PORT_FLAG++
+			[ $STUN_PORT_FLAG -ge 10 ] && {
+				LOG 连续 10 次端口被占用，暂停穿透 3600 秒
+				sleep 3600
+				unset STUN_PORT_FLAG
+				break
 			}
-			STUN_PORT_FLAG=0
+			LOG 穿透通道本地端口被占用，跳过 $STUN_PORT_FLAG 次
+			break
 		}
-		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval timeout 2 socat - ${L4PROTO}4:127.0.0.1:$STUN_BIND_PORT | xxd -p -c 0 | grep -oE '002000080001.{12}')
+		unset STUN_PORT_FLAG
 		if [ $HEX ]; then
 			[ ${HEX:12:4} = "${STUN_HEX:12:4}" ] && break
-			if [ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval*2)) ]; then
-				let STUN_TIME_FLAG++
+			[ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval*2)) ] && {
 				LOG 穿透通道保持时间低于 $(($StunInterval*2)) 秒（两次心跳间隔）
+				let STUN_TIME_FLAG++
+				LOG 降低 STUN 心跳间隔，当前为 $(($StunInterval/$STUN_TIME_FLAG)) 秒
 				[ $STUN_TIME_FLAG -ge 10 ] && {
 					LOG 连续 10 次保持时间过短，暂停穿透 3600 秒
 					sleep 3600
 					STUN_TIME=0
-					STUN_TIME_FLAG=0
+					STUN_TIME_FLAG=1
 					break
 				}
-			else
-				STUN_TIME_FLAG=0
-			fi
+			}
 			STUN_HEX=$HEX
 			STUN_IP=$(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX:16:8}^0x2112a442)) | sed 's/../0x& /g'))
 			STUN_PORT=$((0x${HEX:12:4}^0x2112))
@@ -80,16 +73,21 @@ GET_NAT() {
 # 初始化 STUN
 [ -s /tmp/StunServers_$L4PROTO.txt ] || sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
 STUN_TIME=0
+STUN_TIME_FLAG=1
 LOG 当前 STUN 心跳间隔为 $StunInterval 秒
 [ $StunInterface ] && LOG 当前 STUN 绑定接口为 $StunInterface
 if [[ $StunMode =~ nft ]]; then
 	STUN_BIND_PORT=$(shuf -i 1024-65535 -n 1)
 	NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 	[ $STUN_IFACE_IP ] && APPRULE='ip saddr '$StunInterface''
-	[ $STUN_IFACE_IP ] || APPRULE='ip saddr != 127.0.0.1'
+	[ $STUN_IFACE_IP ] || APPRULE='ip daddr != 127.0.0.1'
 	[ $STUN_IFACE_IF ] && OIFNAME='oifname '$StunInterface''
-	nft add chain ip STUN SNAT { type nat hook postrouting priority srcnat + 5 \; }
-	nft insert rule ip STUN SNAT skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter snat to :$STUN_ORIG_PORT comment $NFTNAME
+	nft add chain ip STUN MARK { type nat hook output priority filter \; }
+	for HANDLE in $(nft -as list chain ip STUN MARK | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN MARK handle $HANDLE; done
+	nft insert rule ip STUN MARK skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter ct mark set 0x50080 comment $NFTNAME
+	nft add chain ip STUN SNAT { type nat hook postrouting priority srcnat - 5 \; }
+	for HANDLE in $(nft -as list chain ip STUN SNAT | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN SNAT handle $HANDLE; done
+	nft insert rule ip STUN SNAT meta l4proto $L4PROTO ct mark 0x50080 counter snat to :$STUN_ORIG_PORT comment $NFTNAME
 else
 	STUN_BIND_PORT=$STUN_ORIG_PORT
 fi
@@ -98,5 +96,5 @@ fi
 while :; do
 	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_SERVERS
 	GET_NAT
-	sleep $StunInterval
+	sleep $(($StunInterval/$STUN_TIME_FLAG))
 done
