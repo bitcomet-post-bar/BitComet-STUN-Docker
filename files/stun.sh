@@ -71,12 +71,14 @@ GET_NAT() {
 
 # 穿透通道保活
 KEEPALIVE() {
-	[ -s /tmp/SiteList.txt ] || sort -R /files/SiteList.txt | tr -d '\r' >/tmp/SiteList.txt
-	for SERVER in $(cat /tmp/SiteList.txt); do
+	[ -s /tmp/SiteList.txt ] || sort -R /files/SiteList.txt >/tmp/SiteList.txt
+	STUN_HTTP=0
+	for SERVER in $(tr -d '\r' </tmp/SiteList.txt); do
 		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- timeout 2 socat - tcp4:$SERVER:80,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
-		echo "$RES" | grep -q HTTP && break
-		LOG HTTP 服务器 $SERVER 不可用，后续排除
 		sed '/^'$SERVER'$/d' -i /tmp/SiteList.txt
+		echo "$RES" | grep -q HTTP && break
+		let STUN_HTTP++
+		[ $STUN_HTTP -ge 10 ] && LOG HTTP 保活连续失败 10 次，本次跳过 && break
 	done
 }
 
