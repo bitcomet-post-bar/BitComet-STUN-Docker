@@ -494,6 +494,7 @@ EXIT() {
 	pkill -f stun_exec.sh
 	pkill -f nftables.sh
 	pkill -f nftables_noft.sh
+	sleep 1
 	pkill -f nftables_exit.sh
 	sleep 5
 	pkill -f bitcometd
