@@ -6,21 +6,15 @@ pkill -9 -Af "$0 $*"
 NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 CLEANUP() {
 	echo 清理 nftables 规则 | tee -a /BitComet/DockerLogs.log
-	for HANDLE in $(nft -as list chain ip STUN MARK | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MARK handle $HANDLE; done
+	for HANDLE in $(nft -as list chain ip STUN HOOK | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN HOOK handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN SNAT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN SNAT handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
-	nft list chain ip STUN MARK | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN MARK
+	nft list chain ip STUN HOOK | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN HOOK
 	nft list chain ip STUN SNAT | grep -qvE '[{}]$|policy accept' ] || nft delete chain ip STUN SNAT
 	nft list chain ip STUN BTTR_HTTP | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN BTTR_HTTP
 	nft list chain ip STUN BTTR_UDP | grep -qvE '[{}]$|policy accept' ] || nft delete chain ip STUN BTTR_UDP
-	[ $StunModeLite ] || {
-		for HANDLE in $(nft -as list chain ip STUN MITM_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN MITM_OUTPUT handle $HANDLE; done
-		nft list chain ip STUN MITM_OUTPUT | grep -qvE '[{}]$|policy accept' || {
-			nft delete chain ip STUN MITM_OUTPUT
-			nft delete set ip STUN BTTR_HTTPS
-		}
-	}
+	[ $StunModeLite ] || nft list chain ip STUN HOOK | grep -q BTTR_HTTPS || nft delete set ip STUN BTTR_HTTPS
 	nft list chain ip STUN BTTR_NOFT 2>/dev/null | grep -q \"$NFTNAME\" && {
 		for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
 		nft list chain ip STUN BTTR_NOFT | grep -qvE '[{}]$' || nft delete chain ip STUN BTTR_NOFT
