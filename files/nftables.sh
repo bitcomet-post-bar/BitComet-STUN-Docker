@@ -17,7 +17,7 @@ LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 pkill -Af "$0 $*"
 
 # 若规则未发生变化，则退出脚本
-[ -f StunNftables ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
+nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
 LOG nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
@@ -146,11 +146,12 @@ nft -st list ruleset 2>/dev/null | grep -q @ft && {
 	nft add rule ip STUN BTTR_NOFT $OIFNAME ct mark $CTMARK accept comment $NFTNAME
 	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . tcp dport @BTTR_HTTP counter ct mark set $CTMARK comment $NFTNAME
 	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . udp dport @BTTR_UDP counter ct mark set $CTMARK comment $NFTNAME
-	ps x | grep -q $CTMARK || nohup nftables_noft.sh $CTMARK &
+	pgrep -f $CTMARK >/dev/null || nohup nftables_noft.sh $CTMARK &
 }
 
-# 容器退出时清理 nftables 规则
-[ $StunHost = 1 ] && (pgrep -f $NFTNAME >/dev/null || nftables_exit.sh 2>/dev/null &)
-
->StunNftables
 LOG 更新 nftables 规则完成
+
+# 容器退出时清理 nftables 规则
+[ $StunHost = 1 ] && {
+	pgrep -f nftables_exit.sh >/dev/null || exec nftables_exit.sh 2>/dev/null &
+}
