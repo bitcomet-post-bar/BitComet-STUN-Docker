@@ -45,8 +45,8 @@ GET_NAT() {
 		unset STUN_PORT_FLAG
 		if [ $HEX ]; then
 			[ ${HEX:12:4} = "${STUN_HEX:12:4}" ] && break
-			[ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval*2)) ] && {
-				LOG 穿透通道保持时间低于 $(($StunInterval*2)) 秒（两次心跳间隔）
+			[ $(($(date +%s)-$STUN_TIME)) -lt $(($StunInterval/$STUN_TIME_FLAG*2)) ] && {
+				LOG 穿透通道保持时间低于 $(($StunInterval/$STUN_TIME_FLAG*2)) 秒（两次心跳间隔）
 				let STUN_TIME_FLAG++
 				LOG 降低 STUN 心跳间隔，当前为 $(($StunInterval/$STUN_TIME_FLAG)) 秒
 				[ $STUN_TIME_FLAG -ge 10 ] && {
@@ -82,6 +82,7 @@ if [[ $StunMode =~ nft ]]; then
 	[ $STUN_IFACE_IP ] && APPRULE='ip saddr '$StunInterface''
 	[ $STUN_IFACE_IP ] || APPRULE='ip daddr != 127.0.0.1'
 	[ $STUN_IFACE_IF ] && OIFNAME='oifname '$StunInterface''
+	nft add table ip STUN
 	nft add chain ip STUN MARK { type nat hook output priority filter \; }
 	for HANDLE in $(nft -as list chain ip STUN MARK | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN MARK handle $HANDLE; done
 	nft insert rule ip STUN MARK skuid 50080 $OIFNAME $APPRULE $L4PROTO sport $STUN_BIND_PORT counter ct mark set 0x50080 comment $NFTNAME
