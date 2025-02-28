@@ -68,9 +68,11 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		ADD_UPNP
 		[[ $UPNP_FLAG =~ ^[02]$ ]] && echo br-lan >StunUpnpInterface
 	}
-	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && awk '{print$2}' /proc/net/$L4PROTO /proc/net/${L4PROTO}6 | grep -qi ":$(printf '%04x' $LANPORT)" {
+	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && \
+	awk '{print$2}' /proc/net/$L4PROTO /proc/net/${L4PROTO}6 | grep -qi ":$(printf '%04x' $LANPORT)" && \
+	([ ! -f StunUpnpConflict_$L4PROTO ] || [ $(($(date +%s)-$(stat -c %Y StunUpnpConflict_$L4PROTO))) -gt 3600 ]) && {
 		LOG IGD UPnP 设备启用了端口占用检测
-		echo $(date +%s) >StunUpnpConflict_$L4PROTO
+		>StunUpnpConflict_$L4PROTO
 		if pgrep -f stun_keep.sh >/dev/null; then
 			LOG 结束 HTTP 保活并等待端口释放，最大限时 300 秒
 			pkill -f stun_keep.sh
@@ -89,6 +91,7 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 			ADD_UPNP
 			[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
 		done
+		[ $UPNP_FLAG = 0 ] && rm -f StunUpnpConflict_$L4PROTO
 	}
 	[ $UPNP_FLAG = 1 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | head -1
 	[ $UPNP_FLAG = 2 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
