@@ -26,9 +26,9 @@ UPDATE_HTTP() {
 KEEPALIVE() {
 	unset STUN_KEEP_FLAG
 	for SERVER in $(cat /tmp/SiteList.txt); do
-		local START=$(date +%s)
-		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- socat -,ignoreeof tcp4:$SERVER:80,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
-		if [ $(($(date +%s)-$START)) -gt 60 ]; then
+		START=$(date +%s)
+		while :; do echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n"; sleep $StunInterval; done | eval runuser -u socat -- socat - tcp4:$SERVER:80,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE >/dev/null 2>&1
+		if [ $(($(date +%s)-$START)) -gt $(($StunInterval*3)) ]; then
 			let STUN_KEEP_FLAG++
 		else
 			sed '/^'$SERVER'$/d' -i /tmp/SiteList.txt
@@ -45,7 +45,6 @@ while :; do
 		LOG 本次循环共保活 $(($(date +%s)-$STUN_KEEP_START)) 秒
 	else
 		LOG 保活失败，3600 秒后重试
-		LOG 穿透通道可能需要在自动缩短心跳间隔后稳定
 		sleep 3600
 	fi
 done
