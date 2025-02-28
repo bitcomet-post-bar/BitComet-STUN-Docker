@@ -68,31 +68,30 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		ADD_UPNP
 		[[ $UPNP_FLAG =~ ^[02]$ ]] && echo br-lan >StunUpnpInterface
 	}
-	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && {
+	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && awk '{print$2}' /proc/net/$L4PROTO /proc/net/${L4PROTO}6 | grep -qi ":$(printf '%04x' $LANPORT)" {
+		LOG IGD UPnP 设备启用了端口占用检测
+		echo $(date +%s) >StunUpnpConflict_$L4PROTO
 		if pgrep -f stun_keep.sh >/dev/null; then
-			LOG IGD UPnP 设备启用了端口占用检测，尝试使用兼容模式
-			>StunUpnpConflict_$L4PROTO
 			LOG 结束 HTTP 保活并等待端口释放，最大限时 300 秒
 			pkill -f stun_keep.sh
-			timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
+			timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $UPNP_EXPORT)"; do sleep 1; done"
 			if [ $? = 0 ]; then
-				LOG 端口释放成功，尝试更新 UPnP 规则
+				LOG 端口释放成功，继续尝试更新 UPnP 规则
 			else
 				LOG 端口释放失败，仍继续尝试更新 UPnP 规则
 			fi
-			until [ $UPNP_FLAG = 0 ] || [ "$UPNP_TRY" = 5 ]; do
-				let UPNP_TRY++
-				echo UPnP 兼容模式第 $UPNP_TRY 次尝试，最多 5 次
-				ADD_UPNP
-				[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
-			done
-			
-			LOG 重新执行 HTTP 保活
-			stun_keep.sh &
 		else
-			LOG IGD UPnP 设备启用了端口占用检测，请确认正在使用 $UPNP_EXPORT/$L4PROTO 的程序
+			LOG 请确认正在使用 $UPNP_EXPORT/$L4PROTO 的程序，仍继续尝试更新 UPnP 规则
 		fi
+		until [ $UPNP_FLAG = 0 ] || [ "$UPNP_TRY" = 5 ]; do
+			let UPNP_TRY++
+			LOG UPnP 第 $UPNP_TRY 次重试，最多 5 次
+			ADD_UPNP
+			[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
+		done
 	}
 	[ $UPNP_FLAG = 1 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | head -1
 	[ $UPNP_FLAG = 2 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
 }
+
+[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && LOG 重新执行 HTTP 保活 && stun_keep.sh &
