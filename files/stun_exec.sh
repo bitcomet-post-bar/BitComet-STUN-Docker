@@ -51,7 +51,7 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		UPNP_FLAG=$?
 		[ $UPNP_FLAG = 0 ] && LOG 更新 UPnP 规则成功
 	}
-	[ -f StunUpnpInterface ] && export StunUpnpInterface='br-lan'
+	[ -f StunUpnpInterface ] && StunUpnpInterface='br-lan'
 	[[ $StunMode =~ nft ]] || {
 		UPNP_INPORT=$WANPORT
 		UPNP_EXPORT=$LANPORT
@@ -62,12 +62,36 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 	}
 	LOG 本次 UPnP 规则：转发 外部端口 $UPNP_EXPORT/$L4PROTO 至 内部端口 $UPNP_INPORT/$L4PROTO
 	ADD_UPNP
-	[ $UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && [ "$StunUpnpInterface" != '-m br-lan' ] && \
-	[ $(ls /sys/class/net | grep ^br-lan$) ] && {
+	[ $UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && [ "$StunUpnpInterface" != '-m br-lan' ] && [ $(ls /sys/class/net | grep ^br-lan$) ] && {
 		LOG 未找到 IGD UPnP 设备，尝试使用 br-lan 接口
-		export StunUpnpInterface='br-lan'
+		StunUpnpInterface='br-lan'
 		ADD_UPNP
 		[[ $UPNP_FLAG =~ ^[02]$ ]] && echo br-lan >StunUpnpInterface
+	}
+	[ $UPNP_FLAG = 2 ] && [[ $UPNP_RES == *'ConflictWithOtherMechanisms'* ]] && {
+		if pgrep -f stun_keep.sh >/dev/null; then
+			LOG IGD UPnP 设备启用了端口占用检测，尝试使用兼容模式
+			>StunUpnpConflict_$L4PROTO
+			LOG 结束 HTTP 保活并等待端口释放，最大限时 300 秒
+			pkill -f stun_keep.sh
+			timeout 300 bash -c "while awk '{print\$2}' /proc/net/$L4PROTO | grep -qi ":$(printf '%04x' $LANPORT)"; do sleep 1; done"
+			if [ $? = 0 ]; then
+				LOG 端口释放成功，尝试更新 UPnP 规则
+			else
+				LOG 端口释放失败，仍继续尝试更新 UPnP 规则
+			fi
+			until [ $UPNP_FLAG = 0 ] || [ "$UPNP_TRY" = 5 ]; do
+				let UPNP_TRY++
+				echo UPnP 兼容模式第 $UPNP_TRY 次尝试，最多 5 次
+				ADD_UPNP
+				[ $UPNP_FLAG = 0 ] || [ $UPNP_TRY = 5 ] || sleep 15
+			done
+			
+			LOG 重新执行 HTTP 保活
+			stun_keep.sh &
+		else
+			LOG IGD UPnP 设备启用了端口占用检测，请确认正在使用 $UPNP_EXPORT/$L4PROTO 的程序
+		fi
 	}
 	[ $UPNP_FLAG = 1 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | head -1
 	[ $UPNP_FLAG = 2 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
