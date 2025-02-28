@@ -27,7 +27,7 @@ KEEPALIVE() {
 	unset STUN_KEEP_FLAG
 	for SERVER in $(cat /tmp/SiteList.txt); do
 		local START=$(date +%s)
-		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- socat - tcp4:$SERVER:80,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
+		local RES=$(echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n" | eval runuser -u socat -- socat -,ignoreeof tcp4:$SERVER:80,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1)
 		if [ $(($(date +%s)-$START)) -gt 60 ]; then
 			let STUN_KEEP_FLAG++
 		else
