@@ -96,8 +96,6 @@ fi
 # 循环执行 STUN
 while :; do
 	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_STUN
-	[ $L4PROTO = tcp ] && [ ! -s /tmp/SiteList_tcp.txt ] && UPDATE_HTTP
 	GET_NAT
-	[ $L4PROTO = tcp ] && KEEPALIVE
 	sleep $(($StunInterval/$STUN_TIME_FLAG))
 done
