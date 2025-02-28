@@ -91,7 +91,11 @@ if [[ $StunMode =~ nft ]]; then
 else
 	export STUN_BIND_PORT=$STUN_ORIG_PORT
 fi
-[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && LOG 已启用 TCP 通道，执行 HTTP 保活 && stun_keep.sh &
+[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && {
+	LOG 已启用 TCP 通道，执行 HTTP 保活
+	LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
+	stun_keep.sh &
+}
 
 # 循环执行 STUN
 while :; do
