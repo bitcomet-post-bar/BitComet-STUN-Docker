@@ -1,0 +1,6 @@
+# 在此输入自定义 HTTPS Tracker，每行一个
+# 最小格式为 https://example.com 或 https://1.2.3.4
+# 必须 https:// 开头，不可 http:// 或 udp:// 等
+# 域名或 IP 后面的内容可有可无
+# https://example.com/announce
+# https://example.com:8443/announce?key=123456789abcdef
