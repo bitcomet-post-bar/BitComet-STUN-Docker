@@ -158,5 +158,5 @@ LOG 更新 nftables 规则完成
 
 # 容器退出时清理 nftables 规则
 [ $StunHost = 1 ] && {
-	pgrep -f nftables_exit.sh >/dev/null || exec nftables_exit.sh 2>/dev/null &
+	pgrep -f nftables_exit.sh >/dev/null || setsid nftables_exit.sh 2>/dev/null &
 }
