@@ -97,9 +97,11 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 	[ $UPNP_FLAG = 2 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
 }
 
+# 连通性检测
 if echo | socat - $L4PROTO:$WANADDR:$WANPORT,connect-timeout=2 2>/dev/null; then
 	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测成功
 else
 	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测失败，请确认路径上的防火墙
 fi
+
 [ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && LOG 重新执行 HTTP 保活 && stun_keep.sh &
