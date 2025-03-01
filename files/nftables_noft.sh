@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 防止脚本重复运行
-pkill -Af "$0 $*"
+pkill -Af $0
 
 CTMARK=$1
 TABLE=$(nft -st list ruleset | sed '/flow add @/q' | grep -oE '^table.*\{' | awk '{print$2,$3}' | tail -1)
