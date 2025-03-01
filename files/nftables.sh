@@ -14,7 +14,7 @@ NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
 # 防止脚本重复运行
-pkill -Af "$0 $*"
+pkill -Af $0.*$L4PROTO
 
 # 若规则未发生变化，则退出脚本
 [ -f StunNftables ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
@@ -130,12 +130,12 @@ UPDATE_HTTPS() {
 		LOG "$(echo "$LIST" | sed '/^$/d')"
 	}
 	LOG 已加载 $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) 个 HTTPS Tracker
-	echo $(date +%s) >StunHttpsTrackers
+	>StunHttpsTrackers
 }
 [ $StunModeLite ] || {
 	[ $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) = 0 ] && UPDATE_HTTPS
 	[ -f StunHttpsTrackers ] || UPDATE_HTTPS
-	[ $(($(date +%s)-$(cat StunHttpsTrackers))) -gt 3600 ] && UPDATE_HTTPS
+	[ $(($(date +%s)-$(stat -c %Y StunHttpsTrackers))) -gt 3600 ] && UPDATE_HTTPS
 	nft add chain ip STUN NAT_OUTPUT { type nat hook output priority dstnat \; }
 	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
 	nft insert rule ip STUN NAT_OUTPUT $OIFNAME $APPRULE skuid != 58443 ip daddr . tcp dport @BTTR_HTTPS counter redirect to $StunMitmEnPort comment $NFTNAME
