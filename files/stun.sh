@@ -29,7 +29,7 @@ UPDATE_STUN() {
 # 穿透通道检测
 GET_NAT() {
 	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
-		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- socat - ${L4PROTO}4:$SERVER,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0 | grep -oE '002000080001.{12}')
+		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- socat - ${L4PROTO}4:$SERVER,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0)
 		local HEX=$(echo $RES | grep -oE '002000080001.{12}')
 		echo $RES | grep -q 4164647265737320616c726561647920696e20757365 && {
 			let STUN_PORT_FLAG++
