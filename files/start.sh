@@ -395,8 +395,9 @@ START_NAT() {
 		[ $StunInterface ] && LOG 指定网络接口时，HTTPS 改包不生效；自动更改为轻量模式 && export StunModeLite=1
 		[ $StunInterface ] || LOG 已指定轻量改包模式，忽略 HTTPS Tracker
 	}
-	[ $StunModeLite ] && [[ ! $StunMode =~ nft ]] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
-	[ $StunHost = 0 ] && [[ ! $StunMode =~ nft ]] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
+	[[ ! $StunMode =~ nft ]] && [ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
+	[[ ! $StunMode =~ nft ]] && [ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
+	[[ ! $StunMode =~ nft ]] && [ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
 }
 
 # 初始化 SSLproxy
@@ -463,6 +464,11 @@ else
 		awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
 		echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort'|'$STUN_ORIG_PORT')$'
 	do export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1); done
+	[[ $StunMode =~ nft ]] && [ "$StunUpnp" != 0 ] && {
+		LOG 已启用 UPnP，添加规则后再启动 BitComet
+		[[ $StunMode =~ tcp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT tcp
+		[[ $StunMode =~ udp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT udp
+	}
 	START_BITCOMET
 	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || {
 		LOG BitComet BT 端口未监听，3 秒后重试
@@ -478,12 +484,12 @@ else
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
 	if [ $StunMode = nftboth ]; then
-		stun.sh tcp &
-		stun.sh udp &
+		(stun.sh tcp & sleep 15; stun.sh udp &) &
 	else
 		[[ $StunMode =~ tcp ]] && stun.sh tcp &
 		[[ $StunMode =~ udp ]] && stun.sh udp &
 	fi
+	disown -h $(jobs -p)
 fi
 
 # 执行 PeerBanHelper
