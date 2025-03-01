@@ -36,7 +36,10 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 }
 
 # UPnP
-[[ $StunMode =~ nft ]] || [ "$StunUpnp" = 0 ] || stun_upnp.sh $WANPORT $LANPORT $L4PROTO
+ [ "$StunUpnp" = 0 ] || {
+	[[ $StunMode =~ nft ]] && stun_upnp.sh $APPPORT $APPPORT $L4PROTO
+	[[ $StunMode =~ nft ]] || stun_upnp.sh $WANPORT $LANPORT $L4PROTO
+}
 
 # TCP 通道保活
 [ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && {
