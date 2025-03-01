@@ -66,6 +66,7 @@ GET_NAT() {
 			break
 		}
 		# LOG STUN 服务器 $SERVER 不可用，后续排除
+		echo $RES
 		sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
 	done
 }
