@@ -43,10 +43,10 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 		[ $StunUpnpUrl ] && local StunUpnpUrl='-u '$StunUpnpUrl''
 		[ $StunUpnpAddr ] || local StunUpnpAddr=@
 		UPNP_START='upnpc '$StunUpnpArgs' '$StunUpnpInterface' '$StunUpnpUrl' -i -e "STUN BitComet Docker" -a '$StunUpnpAddr' '$UPNP_INPORT' '$UPNP_EXPORT' '$L4PROTO''
-		[ $UPNP_TRY ] || {
-			LOG 本次 UPnP 执行命令
-			LOG $UPNP_START
-		}
+#		[ $UPNP_TRY ] || {
+#			LOG 本次 UPnP 执行命令
+#			LOG $UPNP_START
+#		}
 		UPNP_RES=$(eval $UPNP_START 2>&1)
 		UPNP_FLAG=$?
 		[ $UPNP_FLAG = 0 ] && LOG 更新 UPnP 规则成功
