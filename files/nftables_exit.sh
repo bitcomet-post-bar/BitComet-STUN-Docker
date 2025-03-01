@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 防止脚本重复运行
-pkill -9 -Af "$0 $*"
+pkill -9 -Af $0
 
 NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 CLEANUP() {
