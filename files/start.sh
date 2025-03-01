@@ -470,8 +470,8 @@ else
 	}
 	until awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)''; do
 		let START_TRY++
-		[ $START_TRY -ge 10 ] && LOG BitComet BT 端口监听失败，退出容器 && exit 1
-		LOG 第 $START_TRY 次重启 BitComet，最多 10 次
+		[ $START_TRY -ge 15 ] && LOG BitComet BT 端口监听失败，退出容器 && exit 1
+		LOG 第 $START_TRY 次重启 BitComet，最多 15 次
 		pkill -f bitcometd && sleep 1
 		START_BITCOMET && sleep 2
 	done
