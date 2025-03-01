@@ -104,4 +104,9 @@ else
 	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测失败，请确认路径上的防火墙
 fi
 
-[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && LOG 重新执行 HTTP 保活 && stun_keep.sh &
+# TCP 通道保活
+[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && {
+	LOG 已启用 TCP 通道，执行 HTTP 保活
+	LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
+	stun_keep.sh &
+}
