@@ -4,13 +4,13 @@
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
 # 防止脚本重复运行
-pkill -Af "$0 $*"
+pkill -Af $0
 
 # 更新 HTTP 服务器
 UPDATE_HTTP() {
 	LOG 更新 HTTP 服务器列表，最多等待 15 秒
 	echo -ne "GET /topsites_cn.txt HTTP/1.1\r\nHost: oniicyan.pages.dev\r\nConnection: close\r\n\r\n" | \
-	timeout 15 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -vE ':|/' | grep -v $'\r' >/tmp/SiteList.txt
+	timeout -k 5 10 openssl s_client -connect oniicyan.pages.dev:443 -quiet 2>/dev/null | grep -vE ':|/' | grep -v $'\r' >/tmp/SiteList.txt
 	if [ -s /tmp/SiteList.txt ]; then
 		LOG 更新 HTTP 服务器列表成功
 		mv -f /tmp/SiteList.txt SiteList.txt
