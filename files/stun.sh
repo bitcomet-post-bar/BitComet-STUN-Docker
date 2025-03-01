@@ -94,7 +94,7 @@ else
 fi
 
 # 捕获暂停信号
-trap 'sleep '$(($StunInterval*3))'' SIGUSR1
+trap 'echo 检测到暂停信号; sleep '$(($StunInterval*3))'' SIGUSR1
 
 # 循环执行 STUN
 while :; do
