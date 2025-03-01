@@ -497,12 +497,12 @@ if [ "$PBH" = 0 ]; then
 	LOG 已禁用 PeerBanHelper
 else
 	LOG 已启用 PeerBanHelper，60 秒后启动
-	sleep 60
-	( cd /PeerBanHelper
+	( sleep 60
+	cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
-	grep -vE '(/|-)INFO' & )
+	grep -vE '(/|-)INFO' &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
-	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
+	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done ) &
 fi
 
 # 后期处理
