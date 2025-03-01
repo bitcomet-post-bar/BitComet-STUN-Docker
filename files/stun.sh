@@ -8,7 +8,7 @@ L4PROTO=$1
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
 # 防止脚本重复运行
-pkill -Af "$0 $*"
+pkill -Af $0.*$L4PROTO
 
 # 更新 STUN 服务器
 UPDATE_STUN() {
@@ -62,7 +62,7 @@ GET_NAT() {
 			STUN_IP=$(printf '%d.%d.%d.%d\n' $(printf '%x\n' $((0x${HEX:16:8}^0x2112a442)) | sed 's/../0x& /g'))
 			STUN_PORT=$((0x${HEX:12:4}^0x2112))
 			STUN_TIME=$(date +%s)
-			stun_exec.sh $STUN_IP $STUN_PORT $STUN_BIND_PORT $L4PROTO &
+			setsid stun_exec.sh $STUN_IP $STUN_PORT $STUN_BIND_PORT $L4PROTO &
 			break
 		}
 		# LOG STUN 服务器 $SERVER 不可用，后续排除
