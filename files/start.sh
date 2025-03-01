@@ -353,7 +353,7 @@ START_NAT() {
 }
 
 # 初始化 STUN
-rm -f StunPort* StunUpnpInterface StunNftables StunHttpsTrackers
+rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables StunHttpsTrackers
 [ "$STUN" = 0 ] || {
 	[ "$StunMode" ] || LOG 未指定 STUN 穿透模式，自动设置
 	[ "$StunMode" ] && [[ ! $StunMode =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
@@ -445,6 +445,10 @@ rm -f StunPort* StunUpnpInterface StunNftables StunHttpsTrackers
 }
 
 # 执行 STUN 及 BitComet
+START_BITCOMET() {
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
+}
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
 	/files/BitComet/bin/bitcometd &
@@ -456,9 +460,18 @@ else
 		awk '{print$2,$4}' /proc/net/udp /proc/net/udp6 | grep 07 | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || \
 		echo $BITCOMET_BT_PORT | grep -qE '^('$BITCOMET_WEBUI_PORT'|'$PBH_WEBUI_PORT'|'$StunMitmEnPort'|'$StunMitmDePort'|'$STUN_ORIG_PORT')$'
 	do export BITCOMET_BT_PORT=$(shuf -i 10000-65535 -n 1); done
-	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
-	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
-	sleep 5
+	START_BITCOMET
+	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || {
+		LOG BitComet BT 端口未监听，3 秒后重试
+		sleep 3
+	}
+	until awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)''; do
+		let START_TRY++
+		[ $START_TRY -ge 10 ] && LOG BitComet BT 端口监听失败，退出容器 && exit 1
+		LOG 第 $START_TRY 次重启 BitComet，最多 10 次
+		pkill -f bitcometd && sleep 1
+		START_BITCOMET && sleep 2
+	done
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
 	if [ $StunMode = nftboth ]; then
