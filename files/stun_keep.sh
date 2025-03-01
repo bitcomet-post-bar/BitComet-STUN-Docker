@@ -27,7 +27,7 @@ KEEPALIVE() {
 	unset STUN_KEEP_FLAG
 	for SERVER in $(cat /tmp/SiteList.txt); do
 		START=$(date +%s)
-		while :; do echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n"; sleep $StunInterval; done | eval runuser -u socat -- socat - tcp4:$SERVER:80,connect-timeout=2$STUN_IFACE >/dev/null 2>&1
+		while :; do echo -ne "HEAD / HTTP/1.1\r\nHost: $SERVER\r\nConnection: keep-alive\r\n\r\n"; sleep $StunInterval; done | eval runuser -u socat -- socat - tcp4:$SERVER:80,connect-timeout=2,reuseport$STUN_IFACE >/dev/null 2>&1
 		if [ $(($(date +%s)-$START)) -gt $(($StunInterval*3)) ]; then
 			let STUN_KEEP_FLAG++
 		else
