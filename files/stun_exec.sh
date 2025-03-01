@@ -11,7 +11,7 @@ APPPORT=$STUN_ORIG_PORT
 # 定义日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
-LOG 本次穿透通道为 $WANADDR:$WANPORT
+LOG 本次穿透通道为 $WANADDR:$WANPORT/$L4PROTO
 
 # 防止脚本重复运行
 pkill -Af "$0 $*"
@@ -23,14 +23,14 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 
 # 传统模式
 [[ $StunMode =~ nft ]] || {
-	echo [$(date)] $WANADDR:$WANPORT '->' :$LANPORT '->' :$WANPORT >>/BitComet/DockerStun.log
+	echo [$(date)] $L4PROTO $WANADDR:$WANPORT '->' :$LANPORT '->' :$WANPORT >>/BitComet/DockerStun.log
 	LOG 当前为传统模式，更新 BitComet 监听端口
 	/files/BitComet/bin/bitcometd --bt_port $WANPORT >/dev/null
 }
 
 # 改包模式
 [[ $StunMode =~ nft ]] && {
-	echo [$(date)] $WANADDR:$WANPORT '->' :$APPPORT >>/BitComet/DockerStun.log
+	echo [$(date)] $L4PROTO $WANADDR:$WANPORT '->' :$APPPORT >>/BitComet/DockerStun.log
 	LOG 当前为改包模式，更新 nftables 规则
 	nftables.sh $@
 }
@@ -97,4 +97,9 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 	[ $UPNP_FLAG = 2 ] && LOG 更新 UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
 }
 
+if echo | socat - $L4PROTO:$WANADDR:$WANPORT,connect-timeout=2 2>/dev/null; then
+	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测成功
+else
+	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测失败，请确认路径上的防火墙
+fi
 [ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && LOG 重新执行 HTTP 保活 && stun_keep.sh &
