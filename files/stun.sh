@@ -93,6 +93,9 @@ else
 	export STUN_BIND_PORT=$STUN_ORIG_PORT
 fi
 
+# 捕获暂停信号
+trap 'sleep '$(($StunInterval*3))'' SIGUSR1
+
 # 循环执行 STUN
 while :; do
 	[ -s /tmp/StunServers_$L4PROTO.txt ] || UPDATE_STUN
