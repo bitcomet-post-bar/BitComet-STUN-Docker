@@ -19,7 +19,7 @@ for DIR in /BitComet /PeerBanHelper; do
 	if ! mount | grep -q ' '$DIR' '; then
 		echo $DIR 目录未挂载 | tee -a /tmp/DockerLogs.log
 		DIR_CFG_FLAG=1
-		[ -d $DIR ] || mkdir $DIR
+		mkdir $DIR
 	fi
 done
 chmod 775 /BitComet
@@ -44,6 +44,8 @@ if mount | grep -q ' /Downloads '; then
 else
 	LOG /Downloads 目录未挂载，默认保存位置在容器层，重启后可能会丢失
 	BC_DL_FLAG=1
+	mkdir /Downloads
+	
 fi
 chmod 775 /Downloads
 BC_DL_REX='/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts'
