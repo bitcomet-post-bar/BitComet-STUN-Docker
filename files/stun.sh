@@ -29,7 +29,7 @@ UPDATE_STUN() {
 # 穿透通道检测
 GET_NAT() {
 	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
-		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- socat - ${L4PROTO}4:$SERVER,connect-timeout=2,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0 | grep -oE '002000080001.{12}')
+		local RES=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval runuser -u socat -- socat - ${L4PROTO}4:$SERVER,connect-timeout=2,reuseport,sourceport=$STUN_BIND_PORT$STUN_IFACE 2>&1 | xxd -p -c 0 | grep -oE '002000080001.{12}')
 		local HEX=$(echo $RES | grep -oE '002000080001.{12}')
 		echo $RES | grep -q 4164647265737320616c726561647920696e20757365 && {
 			let STUN_PORT_FLAG++
@@ -40,6 +40,7 @@ GET_NAT() {
 				break
 			}
 			LOG 穿透通道本地端口被占用，跳过 $STUN_PORT_FLAG 次
+			[[ $StunMode =~ nft ]] && export STUN_BIND_PORT=$(shuf -i 1024-65535 -n 1)
 			break
 		}
 		unset STUN_PORT_FLAG
@@ -64,7 +65,7 @@ GET_NAT() {
 			stun_exec.sh $STUN_IP $STUN_PORT $STUN_BIND_PORT $L4PROTO &
 			break
 		}
-		LOG STUN 服务器 $SERVER 不可用，后续排除
+		# LOG STUN 服务器 $SERVER 不可用，后续排除
 		sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
 	done
 }
