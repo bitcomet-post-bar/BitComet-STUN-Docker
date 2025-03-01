@@ -23,6 +23,7 @@ for DIR in /BitComet /PeerBanHelper; do
 	fi
 done
 chmod 775 /BitComet
+chmod 775 /PeerBanHelper
 mv -f /BitComet/DockerLogs.log /BitComet/DockerLogs.old 2>/dev/null
 mv -f /tmp/DockerLogs.log /BitComet/DockerLogs.log
 [ $DIR_CFG_FLAG ] && LOG 应用程序配置及数据保存到容器层，重启后可能会丢失
@@ -44,7 +45,7 @@ else
 	LOG /Downloads 目录未挂载，默认保存位置在容器层，重启后可能会丢失
 	BC_DL_FLAG=1
 fi
-chmod 775 /BitComet
+chmod 775 /Downloads
 BC_DL_REX='/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts'
 BC_DL_DIR=$(mount | grep -E '^/' | grep -vE ' ('$BC_DL_REX') ' | awk '{print$3}')
 if [ $BC_DL_DIR ]; then
