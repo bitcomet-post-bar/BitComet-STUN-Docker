@@ -7,7 +7,7 @@ HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 |
 
 # 清理文件
 rm -f /tmp/*.txt
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables StunHttpsTrackers
+rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables* StunHttpsTrackers
 
 # 初始化日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
@@ -497,12 +497,12 @@ if [ "$PBH" = 0 ]; then
 	LOG 已禁用 PeerBanHelper
 else
 	LOG 已启用 PeerBanHelper，60 秒后启动
-	sleep 60
-	( cd /PeerBanHelper
+	( sleep 60
+	cd /PeerBanHelper
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
-	grep -vE '(/|-)INFO' & )
+	grep -vE '(/|-)INFO' &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
-	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
+	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done ) &
 fi
 
 # 后期处理
