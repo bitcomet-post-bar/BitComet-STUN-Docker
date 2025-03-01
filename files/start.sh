@@ -19,10 +19,11 @@ for DIR in /BitComet /PeerBanHelper; do
 	if ! mount | grep -q ' '$DIR' '; then
 		echo $DIR 目录未挂载 | tee -a /tmp/DockerLogs.log
 		DIR_CFG_FLAG=1
-		[ -d $DIR ] || mkdir $DIR
+		mkdir $DIR
 	fi
 done
 chmod 775 /BitComet
+chmod 775 /PeerBanHelper
 mv -f /BitComet/DockerLogs.log /BitComet/DockerLogs.old 2>/dev/null
 mv -f /tmp/DockerLogs.log /BitComet/DockerLogs.log
 [ $DIR_CFG_FLAG ] && LOG 应用程序配置及数据保存到容器层，重启后可能会丢失
@@ -43,8 +44,10 @@ if mount | grep -q ' /Downloads '; then
 else
 	LOG /Downloads 目录未挂载，默认保存位置在容器层，重启后可能会丢失
 	BC_DL_FLAG=1
+	mkdir /Downloads
+	
 fi
-chmod 775 /BitComet
+chmod 775 /Downloads
 BC_DL_REX='/Downloads|/BitComet|/PeerBanHelper|/tmp|/etc/resolv.conf|/etc/hostname|/etc/hosts'
 BC_DL_DIR=$(mount | grep -E '^/' | grep -vE ' ('$BC_DL_REX') ' | awk '{print$3}')
 if [ $BC_DL_DIR ]; then
@@ -499,10 +502,10 @@ else
 	LOG 已启用 PeerBanHelper，60 秒后启动
 	( sleep 60
 	cd /PeerBanHelper
-	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | \
-	grep -vE '(/|-)INFO' &
+	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | grep 'ERROR' &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
-	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done ) &
+	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
+	LOG PeerBanHelper 仅输出错误日志，其他内容请从 WebUI 中查看 ) &
 fi
 
 # 后期处理
