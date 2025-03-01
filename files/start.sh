@@ -5,6 +5,10 @@
 [ $BITCOMET_WEBUI_PASSWORD ] && export WEBUI_PASSWORD=$BITCOMET_WEBUI_PASSWORD
 HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 | sort | uniq)
 
+# 清理文件
+rm -f /tmp/*.txt
+rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables StunHttpsTrackers
+
 # 初始化日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
 
@@ -353,7 +357,6 @@ START_NAT() {
 }
 
 # 初始化 STUN
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables StunHttpsTrackers
 [ "$STUN" = 0 ] || {
 	[ "$StunMode" ] || LOG 未指定 STUN 穿透模式，自动设置
 	[ "$StunMode" ] && [[ ! $StunMode =~ ^(tcp|udp|nfttcp|nftudp|nftboth)$ ]] && {
