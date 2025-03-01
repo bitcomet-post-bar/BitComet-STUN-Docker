@@ -5,7 +5,6 @@ pkill -9 -Af "$0 $*"
 
 NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 CLEANUP() {
-	echo 清理 nftables 规则 | tee -a /BitComet/DockerLogs.log
 	for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep $NFTNAME | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
