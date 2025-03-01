@@ -505,7 +505,8 @@ else
 	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar >/dev/null 2>&1 &
 #	grep -vE '(/|-)INFO' &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
-	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done ) &
+	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
+	LOG PeerBanHelper 日志已屏蔽，请从 WebUI 中查看 ) &
 fi
 
 # 后期处理
