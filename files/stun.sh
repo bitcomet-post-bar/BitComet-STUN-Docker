@@ -84,11 +84,11 @@ if [[ $StunMode =~ nft ]]; then
 	[ $STUN_IFACE_IF ] && OIFNAME='oifname '$StunInterface''
 	nft add table ip STUN
 	nft add chain ip STUN NAT_OUTPUT { type nat hook output priority dstnat \; }
-	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"${NFTNAME}_snat\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
-	nft insert rule ip STUN NAT_OUTPUT skuid 50080 $OIFNAME $APPRULE meta l4proto $L4PROTO counter ct mark set 0x50080 comment ${NFTNAME}_snat
+	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
+	nft insert rule ip STUN NAT_OUTPUT skuid 50080 $OIFNAME $APPRULE meta l4proto $L4PROTO counter ct mark set 0x50080 comment $NFTNAME
 	nft add chain ip STUN NAT_POSTROUTING { type nat hook postrouting priority srcnat - 5 \; }
-	for HANDLE in $(nft -as list chain ip STUN NAT_POSTROUTING | grep \"${NFTNAME}_snat\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN NAT_POSTROUTING handle $HANDLE; done
-	nft insert rule ip STUN NAT_POSTROUTING meta l4proto $L4PROTO ct mark 0x50080 counter snat to :$STUN_ORIG_PORT comment ${NFTNAME}_snat
+	for HANDLE in $(nft -as list chain ip STUN NAT_POSTROUTING | grep \"$NFTNAME\" | grep $L4PROTO | awk '{print$NF}'); do nft delete rule ip STUN NAT_POSTROUTING handle $HANDLE; done
+	nft insert rule ip STUN NAT_POSTROUTING meta l4proto $L4PROTO ct mark 0x50080 counter snat to :$STUN_ORIG_PORT comment $NFTNAME
 else
 	export STUN_BIND_PORT=$STUN_ORIG_PORT
 fi
