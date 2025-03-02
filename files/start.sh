@@ -492,6 +492,7 @@ else
 		[[ $StunMode =~ tcp ]] && stun.sh tcp &
 		[[ $StunMode =~ udp ]] && stun.sh udp &
 	fi
+	[[ $StunMode =~ nft ]] && [ $StunHost = 1 ] && (pgrep -f nftables_exit.sh >/dev/null || nftables_exit.sh 2>/dev/null &)
 	disown -h $(jobs -p)
 fi
 
@@ -502,7 +503,7 @@ else
 	LOG 已启用 PeerBanHelper，60 秒后启动
 	( sleep 60
 	cd /PeerBanHelper
-	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | grep 'ERROR' &
+	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | grep ERROR &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
 	LOG PeerBanHelper 仅输出错误日志，其他内容请从 WebUI 中查看 ) &
@@ -515,7 +516,6 @@ EXIT() {
 	pkill -f stun_keep.sh
 	pkill -f stun_exec.sh
 	pkill -f nftables.sh
-	pkill -f nftables_noft.sh
 	pkill -f socat
 	sleep 1
 	pkill -f nftables_exit.sh
