@@ -453,8 +453,8 @@ START_NAT() {
 
 # 执行 STUN 及 BitComet
 START_BITCOMET() {
-	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
-	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
 }
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
@@ -492,6 +492,7 @@ else
 		[[ $StunMode =~ tcp ]] && stun.sh tcp &
 		[[ $StunMode =~ udp ]] && stun.sh udp &
 	fi
+	[[ $StunMode =~ nft ]] && [ $StunHost = 1 ] && (pgrep -f nftables_exit.sh >/dev/null || nftables_exit.sh 2>/dev/null &)
 	disown -h $(jobs -p)
 fi
 
@@ -502,21 +503,21 @@ else
 	LOG 已启用 PeerBanHelper，60 秒后启动
 	( sleep 60
 	cd /PeerBanHelper
-	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar | grep 'ERROR' &
+	java $JvmArgs -Dpbh.release=docker -Djava.awt.headless=true -Xmx512M -Xms16M -Xss512k -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ShrinkHeapInSteps -jar /files/PeerBanHelper/PeerBanHelper.jar >/dev/null 2>&1 &
 	LOG PeerBanHelper 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$PBH_WEBUI_PORT; done
-	LOG PeerBanHelper 仅输出错误日志，其他内容请从 WebUI 中查看 ) &
+	LOG PeerBanHelper 日志已屏蔽，请从 WebUI 中查看 ) &
 fi
 
 # 后期处理
 EXIT() {
 	LOG 清理容器环境
+	pkill -f socat
 	pkill -f stun.sh
 	pkill -f stun_keep.sh
 	pkill -f stun_exec.sh
+	pkill -f stun_upnp.sh
 	pkill -f nftables.sh
-	pkill -f nftables_noft.sh
-	pkill -f socat
 	sleep 1
 	pkill -f nftables_exit.sh
 	sleep 2
