@@ -7,9 +7,8 @@ NFTNAME=Docker_BitComet_$STUN_ORIG_PORT
 CLEANUP() {
 	for HANDLE in $(nft -as list chain ip STUN BTTR_HTTP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_HTTP handle $HANDLE; done
 	for HANDLE in $(nft -as list chain ip STUN BTTR_UDP | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_UDP handle $HANDLE; done
-	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"${NFTNAME}_snat\" | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
-	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep \"${NFTNAME}_mitm\" | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
-	for HANDLE in $(nft -as list chain ip STUN NAT_POSTROUTING | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN NAT_POSTROUTING handle $HANDLE; done
+	for HANDLE in $(nft -as list chain ip STUN NAT_OUTPUT | grep $NFTNAME | awk '{print$NF}'); do nft delete rule ip STUN NAT_OUTPUT handle $HANDLE; done
+	for HANDLE in $(nft -as list chain ip STUN NAT_POSTROUTING | grep $NFTNAME | awk '{print$NF}'); do nft delete rule ip STUN NAT_POSTROUTING handle $HANDLE; done
 	[ $StunModeLite ] || nft list chain ip STUN NAT_OUTPUT | grep -q BTTR_HTTPS || nft delete set ip STUN BTTR_HTTPS
 	nft list chain ip STUN BTTR_HTTP | grep -qvE '[{}]$|policy accept' || nft delete chain ip STUN BTTR_HTTP
 	nft list chain ip STUN BTTR_UDP | grep -qvE '[{}]$|policy accept' ] || nft delete chain ip STUN BTTR_UDP
