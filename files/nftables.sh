@@ -21,7 +21,8 @@ pkill -Af $0.*$L4PROTO
 LOG $L4PROTO nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
-[ $L4PROTO = udp ] && [ -f StunNftables_tcp ] && until [ $(($(date +%s)-$(stat -c %Y StunNftables_tcp))) -gt 10 ]; do sleep 1; done
+# [ $L4PROTO = udp ] && [ -f StunNftables_tcp ] && until [ $(($(date +%s)-$(stat -c %Y StunNftables_tcp))) -gt 10 ]; do sleep 1; done
+[ $L4PROTO = udp ] && while pgrep -f $0.+tcp >/dev/null; do sleep 1; done
 
 # 初始化 nftables
 nft add table ip STUN
