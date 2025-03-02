@@ -512,11 +512,12 @@ fi
 # 后期处理
 EXIT() {
 	LOG 清理容器环境
+	pkill -f socat
 	pkill -f stun.sh
 	pkill -f stun_keep.sh
 	pkill -f stun_exec.sh
+	pkill -f stun_upnp.sh
 	pkill -f nftables.sh
-	pkill -f socat
 	sleep 1
 	pkill -f nftables_exit.sh
 	sleep 2
