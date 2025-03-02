@@ -63,7 +63,43 @@ nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP�
 
 ## 快速使用
 
-## 容器网络
+**host 网络 + 传统模式**
+
+```
+docker run -d \
+--name BitComet \
+--net host \
+-v /BC目录:/BitComet \
+-v /DL目录:/Downloads \
+-v /PBH目录:/PeerBanHelper \
+-e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
+-e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
+-e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
+-e BITCOMET_BT_PORT=‘BC BT 端口’ \
+-e PBH_WEBUI_TOKEN='PBH Token' \
+-e PBH_WEBUI_PORT='PBH WebUI 端口' \
+bitcometpostbar/bitcomet:latest
+```
+
+**bridge 网络 + 改包模式**
+
+```
+docker run -d \
+--name BitComet \
+--cap-add \
+-v /BC目录:/BitComet \
+-v /DL目录:/Downloads \
+-v /PBH目录:/PeerBanHelper \
+-e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
+-e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
+-e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
+-e BITCOMET_BT_PORT=‘BC BT 端口’ \
+-e PBH_WEBUI_TOKEN='PBH Token' \
+-e PBH_WEBUI_PORT='PBH WebUI 端口' \
+bitcometpostbar/bitcomet:latest
+```
+
+## 网络配置
 
 本镜像为提升易用性，尽可能地考虑了用户的网络环境，但仍有需要注意的地方。
 
@@ -92,6 +128,8 @@ bridge 网络下如要使用 IPv6，还需要额外的配置。
 host 网络 + 传统模式 由于会改变下载器的监听端口，防火墙的 IPv6 规则可能需要更改。
 
 macvlan 网络是最理想的，但同样需要额外的配置。
+
+## 目录配置
 
 ## 变量说明
 
