@@ -18,10 +18,10 @@ pkill -Af $0.*$L4PROTO
 
 # 若规则未发生变化，则退出脚本
 [ -f StunNftables_$L4PROTO ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
-LOG nftables 规则已存在，无需更新 && exit
+LOG $L4PROTO nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
-[ $StunMode = nftboth ] && [ $L4PROTO = udp ] && until [ $(($(date +%s)-$(stat -c %Y StunNftables_tcp))) -gt 10 ]; do sleep 1; done
+[ $L4PROTO = udp ] && [ -f StunNftables_tcp ] && until [ $(($(date +%s)-$(stat -c %Y StunNftables_tcp))) -gt 10 ]; do sleep 1; done
 
 # 初始化 nftables
 nft add table ip STUN
@@ -142,21 +142,5 @@ UPDATE_HTTPS() {
 	nft insert rule ip STUN BTTR ip daddr 127.0.0.1 $OFFSET_HTTP_GET 0x474554202f616e6e6f756e63653f goto BTTR_HTTP
 }
 
-# 绕过软件加速
-nft -st list ruleset 2>/dev/null | grep -q @ft && {
-	CTMARK=0x$(echo $NFTNAME | md5sum | cut -c -8)
-	nft add chain ip STUN BTTR_NOFT { type filter hook forward priority filter - 5 \; }
-	for HANDLE in $(nft -as list chain ip STUN BTTR_NOFT | grep \"$NFTNAME\" | awk '{print$NF}'); do nft delete rule ip STUN BTTR_NOFT handle $HANDLE; done
-	nft add rule ip STUN BTTR_NOFT $OIFNAME ct mark $CTMARK accept comment $NFTNAME
-	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . tcp dport @BTTR_HTTP counter ct mark set $CTMARK comment $NFTNAME
-	nft add rule ip STUN BTTR_NOFT $OIFNAME $APPRULE ip daddr . udp dport @BTTR_UDP counter ct mark set $CTMARK comment $NFTNAME
-	pgrep -f $CTMARK >/dev/null || setsid nftables_noft.sh $CTMARK &
-}
-
 >StunNftables_$L4PROTO
-LOG 更新 nftables 规则完成
-
-# 容器退出时清理 nftables 规则
-[ $StunHost = 1 ] && {
-	pgrep -f nftables_exit.sh >/dev/null || setsid nftables_exit.sh 2>/dev/null &
-}
+LOG 更新 $L4PROTO nftables 规则完成
