@@ -453,8 +453,8 @@ START_NAT() {
 
 # 执行 STUN 及 BitComet
 START_BITCOMET() {
-	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
-	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd | grep -vE 'IPFilter loaded. record count = [0-9]+' &
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded. record count = [0-9]+' &
 }
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
