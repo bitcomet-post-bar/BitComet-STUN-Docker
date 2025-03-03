@@ -26,6 +26,25 @@ docker run -d \
 bitcometpostbar/bitcomet:latest
 ```
 
+**host 网络（改包模式）**
+
+```
+docker run -d \
+--name BitComet \
+--net host \
+--cap-add NET_ADMIN \
+-v /BC目录:/BitComet \
+-v /DL目录:/Downloads \
+-v /PBH目录:/PeerBanHelper \
+-e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
+-e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
+-e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
+-e BITCOMET_BT_PORT=‘BC BT 端口’ \
+-e PBH_WEBUI_TOKEN='PBH Token' \
+-e PBH_WEBUI_PORT='PBH WebUI 端口' \
+bitcometpostbar/bitcomet:latest
+```
+
 **bridge 网络（改包模式）**
 
 ```

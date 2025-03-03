@@ -7,7 +7,7 @@ HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 |
 
 # 清理文件
 rm -f /tmp/*.txt
-rm -f StunPort* StunUpnpInterface StunUpnpMiss StunUpnpConflict* StunNftables* StunHttpsTrackers
+rm -f StunPort* StunUpnpInterface StunUpnpHit StunUpnpMiss StunUpnpConflict* StunNftables* StunHttpsTrackers
 
 # 初始化日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
