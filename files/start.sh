@@ -394,13 +394,13 @@ START_NAT() {
 			export StunMode=tcp
 		fi
 	fi
-	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && {
-		[ $StunInterface ] && LOG 指定网络接口时，HTTPS 改包不生效；自动更改为轻量模式 && export StunModeLite=1
-		[ $StunInterface ] || LOG 已指定轻量改包模式，忽略 HTTPS Tracker
-	}
-	[[ ! $StunMode =~ nft ]] && [ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
-	[[ ! $StunMode =~ nft ]] && [ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
-	[[ ! $StunMode =~ nft ]] && [ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
+	if [[ $StunMode =~ nft ]];then
+		[ $StunModeLite ] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	else
+		[ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
+		[ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
+		[ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
+	fi
 }
 
 # 初始化 SSLproxy
