@@ -8,7 +8,7 @@ Docker Edition of BitComet Web UI by Post-Bar (unofficial mod)
 
 ## 快速使用
 
-**host 网络 + 传统模式**
+**host 网络（传统模式）**
 
 ```
 docker run -d \
@@ -26,7 +26,7 @@ docker run -d \
 bitcometpostbar/bitcomet:latest
 ```
 
-**bridge 网络 + 改包模式**
+**bridge 网络（改包模式）**
 
 ```
 docker run -d \
@@ -66,6 +66,18 @@ BitTorrent 协议的特性上，需要向 Tracker 通告 NAPT 公网端口，其
 nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP，以免服务器频繁变更端口。但**对于 HTTPS Tracker，由于使用了中间人攻击实现解密**，nftables 检测到的服务器地址始终为 `127.0.0.1`，因此对所有 HTTPS Tracker 都会通告同一个端口号。
 
 　*尚未确认具体会通告 TCP 还是 UDP*
+
+ 基于 UDP 的 uTP 传输协议，通过 DHT 的 `implied_port` 及部分下载器实现的 PEX 端口替换，使其本身带有一定的穿透能力，无论传统模式还是改包模式都不会影响此特性。
+
+ 实际使用中，在 TCP 端口可被连通的情况下，再开启 UDP 穿透的提升并不大。
+
+ 建议仅在 TCP 穿透通道不可用时才启用 UDP 穿透通道。
+
+ ---
+
+改包模式下，**解密 HTTPS Tracker 流量需要信任证书**。该操作只能在当前容器内生效，因此在同一 host 网络下配置多个同方案的穿透时，**HTTPS Tracker 改包仅对最后一个添加规则的容器生效**。（birdge 及 macvlan 网络不受限制）
+
+为避免拦截不必要的 HTTPS 流量而导致网络性能损耗或影响其他程序的通信，仅匹配 [HTTPS Tracker 列表](https://oniicyan.pages.dev/https_trackers.txt) 中的地址与端口。如需要添加自定义 HTTPS Tracker，请编辑 `/BitComet/CustomHttpsTrackers.txt`。
 
 ---
 
@@ -115,23 +127,39 @@ nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP�
 
 * **改包模式**：同样需要 `NET_ADMIN` 权限或特权模式。host 网络下，宿主的所有通信（包括其他容器）都会遍历 nftables 规则，尽管规则已尽可能地精确匹配 Tracker 流量。
 
-#### HTTPS 改包的额外说明
+### macvlan 网络
 
-**解密 HTTPS Tracker 流量时，中间人攻击需要信任证书**。该操作只能在当前容器内生效，因此在同一 host 网络下配置多个同方案的穿透时，**HTTPS Tracker 改包仅对最后一个添加规则的容器生效**。
+推荐使用的网络配置，兼顾以上两者的优点。
 
-为避免拦截不必要的 HTTPS 流量而导致网络性能损耗或影响其他程序的通信，仅匹配 [HTTPS Tracker 列表](https://oniicyan.pages.dev/https_trackers.txt) 中的地址与端口。如需要添加自定义 HTTPS Tracker，请编辑 `/BitComet/CustomHttpsTrackers.txt`。
+**传统模式**：同 host 网络
 
----
+**改包模式**：同 bridge 网络（不干涉容器外的网络通信）
 
-bridge 网络下如要使用 IPv6，还需要额外的配置。
+### IPv6
+
+bridge 与 macvlan 网络下如要使用 IPv6，需要额外的配置。详细请自行查阅 Docker 文档。
 
 host 网络 + 传统模式 由于会改变下载器的监听端口，防火墙的 IPv6 规则可能需要更改。
 
-macvlan 网络是最理想的，但同样需要额外的配置。
+改包模式下的 nftables 规则既不会也不需要干涉任何 IPv6 通信。
 
 ## 目录配置
 
+需要挂载的目录为以下三个
+
+BitComet 配置目录：`/BitComet`
+
+BitComet 下载目录：`/Downloads`
+
+PeerBanHelper 目录：`/PeerBanHelper`
+
+以上任意目录若未挂载，则在容器层自动创建，重启时可能会被 Docker 自动清理。
+
+**其余任何额外挂载的目录，都会自动指定为 BirComet 的自定义下载目录**
+
 ## 变量说明
+
+本镜像可根据容器启动时配置的环境变量来控制各项功能。
 
 ### 基本变量
 
@@ -140,7 +168,7 @@ macvlan 网络是最理想的，但同样需要额外的配置。
 | BITCOMET_WEBUI_USERNAME | BitComet WebUI 用户名 | 随机生成 |
 | BITCOMET_WEBUI_PASSWORD | BitComet WebUI 密码 | 随机生成 |
 | BITCOMET_WEBUI_PORT | BitComet WebUI 端口 | `8080` |
-| BITCOMET_BT_PORT | BitComet BT 端口 | `6082` |
+| BITCOMET_BT_PORT | BitComet BT 端口 | `56082` |
 | PBH_WEBUI_TOKEN | PeerBanHelper WebUI Token | 随机生成 |
 | PBH_WEBUI_PORT | PeerBanHelper WebUI 端口 | `9898` |
 | PBH | PeerBanHelper 开关 | 无 |
@@ -148,9 +176,9 @@ macvlan 网络是最理想的，但同样需要额外的配置。
 
 * 鉴权信息如未指定，则从配置文件中读取；如配置文件也未指定，则随机生成
 
-* 端口如未指定，则使用默认值；如默认端口被占用，则随机使用 `1024-65535` 中未被使用的端口
+* 端口如未指定，则使用默认值；如默认端口被占用，则随机使用 `1024-65535` 中未被使用的端口（BT 端口随机范围为 `10000-65535`）
 
-* 启用 STUN 穿透时，BitComet BT 端口会自动更新为公网端口，`BITCOMET_BT_PORT` 将作为 NATMap 的绑定端口
+* 启用 STUN 穿透时，BitComet BT 端口会自动更新为公网端口，`BITCOMET_BT_PORT` 将作为穿透通道的本地端口
 
 * PBH 与 STUN 默认启用；如需禁用，请指定为 `0`
 
@@ -159,17 +187,25 @@ macvlan 网络是最理想的，但同样需要额外的配置。
 
 | 名称 | 说明 | 默认 |
 | --- | --- | --- |
-| StunServer | STUN 服务器：[域名列表](https://oniicyan.pages.dev/stun_servers_domain.txt)、[IP 列表](https://oniicyan.pages.dev/stun_servers_ipv4.txt) | `turn.cloudflare.com` |
-| StunHttpServer | 穿透通道保活用的 HTTP 服务器 | `qq.com` |
-| StunInterval | 穿透通道保活间隔（秒） | `25` |
-| StunInterface | NATMap 绑定接口或 IP<br>通常在策略分流时指定 | 不启用 |
-| StunArgs | [NATMap 其他参数](https://github.com/heiher/natmap#how-to-use) | 无 |
+| StunMode | 穿透模式，可接受以下值<br>`tcp`：TCP 传统模式<br>`udp`：UDP 传统模式<br>`nfttcp`：TCP 改包模式<br>`nfttcp`：UDP 改包模式<br>`nftboth`：TCP + UDP 改包模式| 自动检测<br>无 NET_ADMIN 权限则使用 TCP 传统模式<br>有 NET_ADMIN 权限则使用 TCP 改包模式 |
+| StunModeLite | 轻量改包模式<br>忽略 HTTPS Tracker，不执行解密 | 无<br>`1`为开启，留空或其他字符则关闭 |
+| StunMitmEnPort | HTTPS 加密流量端口 | `58443` |
+| StunMitmDePort | HTTPS 解密流量端口 | `50080` |
+| StunHost | 指定当前容器是否 host 网络<br>`0`非 host 网络（bridge 或 macvlan 等）<br>`1`为 host 网络 | 自动检测<br>检测 `eth0` 的 MAC 地址 |
+| StunInterface | 穿透时使用的网络接口或源 IP | 无（由路由表选择） |
+| StunInterval | 穿透通道检测/保活间隔（秒）| `25` |
+| StunUpnpAddr | UPnP 映射规则的目的地址 | `@`（自动检测本地地址） |
+| StunUpnpInterface | UPnP 发送 [SSDP](https://zh.wikipedia.org/wiki/SSDP) 报文时使用的接口<br>可填写 IP 地址或接口名称，通常在路由器上运行容器时需要 | 无<br>若找不到 UPnP 设备，则尝试 `br-lan`（若有） |
+| StunUpnpUrl | UPnP 设备描述文件 (XML) 的 URL<br>无法使用 [SSDP](https://zh.wikipedia.org/wiki/SSDP) 时需要 | 无 |
 
-#### UPnP
+* 即使指定了改包模式，若无 NET_ADMIN 权限也会自动变更为传统模式（`nfttcp/nftboth` -> `tcp`, `nftudp` -> `udp`）
+
+* 是否 host 网络的检测方法为判断 `eth0` 的 MAC 地址。使用 Docker 创建的网卡（包括 bridge 或 macvlan 等）默认以 `02:42` 开头，而 host 网络使用宿主网卡，通常为各厂商的登记地址。该检测方法并非 100% 可靠，嵌套容器或指定 MAC 地址启动时会影响检测结果。
+
+* 若穿透通道保持时间低于检测/保活间隔的 3 倍，则自动缩短间隔直至穿透通道稳定
+
+### 其他
 
 | 名称 | 说明 | 默认 |
 | --- | --- | --- |
-| StunUpnpAddr | UPnP 规则的目的地址<br>Bridge 网络下请填写宿主的本地 IP 地址 | `@`（自动检测本地地址） |
-| StunUpnpInterface | UPnP 发送 [SSDP](https://zh.wikipedia.org/wiki/SSDP) 报文时使用的接口<br>可填写 IP 地址或接口名称，通常在路由器上运行容器时需要 | 无 |
-| StunUpnpUrl | UPnP 设备描述文件 (XML) 的 URL<br>用作绕过 [SSDP](https://zh.wikipedia.org/wiki/SSDP)，通常在 Bridge 模式下需要 | 无 |
-| StunUpnpArgs | [MiniUPnPc 其他参数](https://manpages.debian.org/unstable/miniupnpc/upnpc.1.en.html) | 无 |
+| JvmArgs | [Java 虚拟机附加参数](https://docs.oracle.com/cd/E22289_01/html/821-1274/configuring-the-default-jvm-and-java-arguments.html)，仅用作 PeerBanHelper | 无 |
