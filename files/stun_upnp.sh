@@ -33,7 +33,7 @@ ADD_UPNP
 
 [ $STUN_UPNP_FLAG = 1 ] && [[ $UPNP_RES == *'No IGD UPnP Device found on the network'* ]] && {
 	LOG 未找到 IGD UPnP 设备，自动禁用 UPnP
-	LOG 如要恢复启用，请重启容器
+	LOG 如要恢复 UPnP，请重启容器
 	>StunUpnpMiss
 }
 
