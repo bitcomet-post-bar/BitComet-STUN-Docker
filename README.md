@@ -53,9 +53,11 @@ BitTorrent 协议的特性上，需要向 Tracker 通告 NAPT 公网端口，其
 
 而在 **运营商级 NAT** 下，内网端口与公网端口不一致且不固定，因此需要动态修改 BT 下载器向 Tracker 通告的端口。
 
-**传统模式** 的原理是获取 NAPT 公网端口后，修改为下载器的监听端口，以达到让下载器向 Tracker 通告公网端口的效果。
+**传统模式** 的原理是获取 NAPT 公网端口后，修改为下载器的监听端口，以达到让下载器向 Tracker 通告公网端口的效果。**要求 Linux 内核 3.9 以上**。
 
-**改包模式** 的原理是获取 NAPT 公网端口后，通过防火墙框架 nftables 识别下载器的 Tracker 流量，并把通告端口篡改为公网端口。目前支持 HTTP(S) 与 UDP Tracker，WS(S) Tracker 尚未涉及。
+**改包模式** 的原理是获取 NAPT 公网端口后，通过防火墙框架 nftables 识别下载器的 Tracker 流量，并把通告端口篡改为公网端口。**要求 Linux 内核 3.13 以上**。
+
+目前支持 HTTP(S) 与 UDP Tracker 改包，WS(S) Tracker 尚未涉及。
 
 ---
 
