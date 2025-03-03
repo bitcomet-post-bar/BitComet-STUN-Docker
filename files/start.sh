@@ -486,6 +486,7 @@ else
 	done
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
+	[ $StunInterval ] || export StunInterval=25
 	[[ $StunMode =~ tcp|both ]] && {
 		LOG 已启用 TCP 通道，执行 HTTP 保活
 		LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
