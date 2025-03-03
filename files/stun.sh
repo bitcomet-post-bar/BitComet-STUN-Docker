@@ -2,7 +2,6 @@
 
 # 初始化变量
 L4PROTO=$1
-[ $StunInterval ] || export StunInterval=25
 
 # 定义日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
