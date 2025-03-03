@@ -18,7 +18,7 @@ pkill -Af $0.*$L4PROTO
 
 # 若规则未发生变化，则退出脚本
 [ -f StunNftables_$L4PROTO ] && nft -st list table ip STUN 2>&1 | grep $NFTNAME | grep -q $(printf '0x%x' $WANPORT) && \
-LOG $L4PROTO nftables 规则已存在，无需更新 && exit
+LOG ${L4PROTO^^} nftables 规则已存在，无需更新 && exit
 
 # 防止脚本同时操作 nftables 导致冲突
 # [ $L4PROTO = udp ] && [ -f StunNftables_tcp ] && until [ $(($(date +%s)-$(stat -c %Y StunNftables_tcp))) -gt 10 ]; do sleep 1; done
@@ -144,4 +144,4 @@ UPDATE_HTTPS() {
 }
 
 >StunNftables_$L4PROTO
-LOG 更新 $L4PROTO nftables 规则完成
+LOG 更新 ${L4PROTO^^} nftables 规则完成

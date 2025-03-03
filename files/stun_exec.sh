@@ -36,16 +36,10 @@ echo $WANPORT $LANPORT >StunPort_$L4PROTO
 }
 
 # UPnP
- [ "$StunUpnp" = 0 ] || {
+[ "$StunUpnp" = 0 ] || [ -f StunUpnpMiss ] || {
+	pkill -f stun_upnp_keep.sh
 	[[ $StunMode =~ nft ]] && stun_upnp.sh $APPPORT $APPPORT $L4PROTO
 	[[ $StunMode =~ nft ]] || stun_upnp.sh $WANPORT $LANPORT $L4PROTO
-}
-
-# TCP 通道保活
-[ $L4PROTO = tcp ] && ! pgrep -f stun_keep.sh >/dev/null && {
-	LOG 已启用 TCP 通道，执行 HTTP 保活
-	LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
-	setsid stun_keep.sh &
 }
 
 # 连通性检测
@@ -59,4 +53,5 @@ if [ $STUN_CHECK ] && [ $STUN_CHECK -ge 10 ]; then
 else
 	LOG $WANADDR:$WANPORT/$L4PROTO 连通性检测成功
 	[ $L4PROTO = tcp ] && pkill -10 -f stun.sh
+	[ "$StunUpnp" = 0 ] || [ ! -f StunUpnpHit ] || pgrep -f stun_check.sh >/dev/null || exec stun_upnp_check.sh $@ &
 fi

@@ -7,7 +7,7 @@ HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 |
 
 # 清理文件
 rm -f /tmp/*.txt
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables* StunHttpsTrackers
+rm -f StunPort* StunUpnpInterface StunUpnpMiss StunUpnpConflict* StunNftables* StunHttpsTrackers
 
 # 初始化日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
@@ -354,7 +354,7 @@ START_NAT() {
 		export STUN=0
 	}
 	[ "$STUN_FLAG_TCP" = 2 ] && [ "$STUN_FLAG_UDP" = 2 ] && {
-		LOG 当前网络为锥形映射；自动禁用 STUN，请优化 NAT 类型后再尝试
+		LOG 当前网络为对称映射；自动禁用 STUN，请优化 NAT 类型后再尝试
 		export STUN=0
 	}
 }
@@ -394,13 +394,13 @@ START_NAT() {
 			export StunMode=tcp
 		fi
 	fi
-	[ $StunModeLite ] && [[ $StunMode =~ nft ]] && {
-		[ $StunInterface ] && LOG 指定网络接口时，HTTPS 改包不生效；自动更改为轻量模式 && export StunModeLite=1
-		[ $StunInterface ] || LOG 已指定轻量改包模式，忽略 HTTPS Tracker
-	}
-	[[ ! $StunMode =~ nft ]] && [ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
-	[[ ! $StunMode =~ nft ]] && [ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
-	[[ ! $StunMode =~ nft ]] && [ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
+	if [[ $StunMode =~ nft ]];then
+		[ $StunModeLite ] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+	else
+		[ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
+		[ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
+		[ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
+	fi
 }
 
 # 初始化 SSLproxy
@@ -453,8 +453,8 @@ START_NAT() {
 
 # 执行 STUN 及 BitComet
 START_BITCOMET() {
-	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
-	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd | grep -v 'IPFilter loaded' &
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
 }
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
@@ -472,7 +472,7 @@ else
 		[[ $StunMode =~ tcp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT tcp
 		[[ $StunMode =~ udp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT udp
 	}
-	START_BITCOMET
+	START_BITCOMET | grep -v 'IPFilter loaded' &
 	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || {
 		LOG BitComet BT 端口未监听，3 秒后重试
 		sleep 3
@@ -486,8 +486,15 @@ else
 	done
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
+	[ $StunInterval ] || export StunInterval=25
+	[[ $StunMode =~ tcp|both ]] && {
+		LOG 已启用 TCP 通道，执行 HTTP 保活
+		LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
+		stun_keep.sh &
+	}
 	if [ $StunMode = nftboth ]; then
-		(stun.sh tcp & sleep 15; stun.sh udp &) &
+		stun.sh tcp &
+		stun.sh udp &
 	else
 		[[ $StunMode =~ tcp ]] && stun.sh tcp &
 		[[ $StunMode =~ udp ]] && stun.sh udp &
@@ -517,6 +524,7 @@ EXIT() {
 	pkill -f stun_keep.sh
 	pkill -f stun_exec.sh
 	pkill -f stun_upnp.sh
+	pkill -f stun_upnp_keep.sh
 	pkill -f nftables.sh
 	sleep 1
 	pkill -f nftables_exit.sh
