@@ -7,7 +7,7 @@ HOSTIP=$(awk '/32 host/{print f}{f=$2}' /proc/net/fib_trie | grep -v 127.0.0.1 |
 
 # 清理文件
 rm -f /tmp/*.txt
-rm -f StunPort* StunUpnpInterface StunUpnpConflict* StunNftables* StunHttpsTrackers
+rm -f StunPort* StunUpnpInterface StunUpnpMiss StunUpnpConflict* StunNftables* StunHttpsTrackers
 
 # 初始化日志函数
 LOG() { echo "$*" | tee -a /BitComet/DockerLogs.log ;}
@@ -354,7 +354,7 @@ START_NAT() {
 		export STUN=0
 	}
 	[ "$STUN_FLAG_TCP" = 2 ] && [ "$STUN_FLAG_UDP" = 2 ] && {
-		LOG 当前网络为锥形映射；自动禁用 STUN，请优化 NAT 类型后再尝试
+		LOG 当前网络为对称映射；自动禁用 STUN，请优化 NAT 类型后再尝试
 		export STUN=0
 	}
 }
@@ -486,8 +486,14 @@ else
 	done
 	LOG BitComet 已启动，使用以下地址访问 WebUI
 	for IP in $HOSTIP; do LOG http://$IP:$BITCOMET_WEBUI_PORT; done
+	[[ $StunMode =~ tcp|both ]] && {
+		LOG 已启用 TCP 通道，执行 HTTP 保活
+		LOG 若保活失败，穿透通道可能需要在缩短心跳间隔后才稳定
+		stun_keep.sh &
+	}
 	if [ $StunMode = nftboth ]; then
-		(stun.sh tcp & sleep 15; stun.sh udp &) &
+		stun.sh tcp &
+		stun.sh udp &
 	else
 		[[ $StunMode =~ tcp ]] && stun.sh tcp &
 		[[ $StunMode =~ udp ]] && stun.sh udp &
@@ -517,6 +523,7 @@ EXIT() {
 	pkill -f stun_keep.sh
 	pkill -f stun_exec.sh
 	pkill -f stun_upnp.sh
+	pkill -f stun_upnp_keep.sh
 	pkill -f nftables.sh
 	sleep 1
 	pkill -f nftables_exit.sh
