@@ -6,6 +6,44 @@ Docker Edition of BitComet Web UI by Post-Bar (unofficial mod)
 
 　*欢迎移植其他下载器*
 
+## 快速使用
+
+**host 网络 + 传统模式**
+
+```
+docker run -d \
+--name BitComet \
+--net host NET_ADMIN \
+-p 56082:56082 \
+-v /BC目录:/BitComet \
+-v /DL目录:/Downloads \
+-v /PBH目录:/PeerBanHelper \
+-e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
+-e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
+-e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
+-e BITCOMET_BT_PORT=‘BC BT 端口’ \
+-e PBH_WEBUI_TOKEN='PBH Token' \
+-e PBH_WEBUI_PORT='PBH WebUI 端口' \
+bitcometpostbar/bitcomet:latest
+```
+
+**bridge 网络 + 改包模式**
+
+```
+docker run -d \
+--name BitComet \
+--cap-add \
+-v /BC目录:/BitComet \
+-v /DL目录:/Downloads \
+-v /PBH目录:/PeerBanHelper \
+-e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
+-e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
+-e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
+-e BITCOMET_BT_PORT=‘BC BT 端口’ \
+-e PBH_WEBUI_TOKEN='PBH Token' \
+-e PBH_WEBUI_PORT='PBH WebUI 端口' \
+bitcometpostbar/bitcomet:latest
+```
 
 ## 穿透模式
 
@@ -60,44 +98,6 @@ nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP�
 **改包模式** 巧妙地利用 NAT 优先级的特性，**穿透通道的本地端口与下载器的监听端口一致且始终不变**，因此用户侧网关无需再进行端口映射。但由于防火墙的过滤，仍需要配置 **内外一致** 的端口映射规则以达到防火墙放行的效果。
 
 # 使用说明
-
-## 快速使用
-
-**host 网络 + 传统模式**
-
-```
-docker run -d \
---name BitComet \
---net host \
--v /BC目录:/BitComet \
--v /DL目录:/Downloads \
--v /PBH目录:/PeerBanHelper \
--e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
--e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
--e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
--e BITCOMET_BT_PORT=‘BC BT 端口’ \
--e PBH_WEBUI_TOKEN='PBH Token' \
--e PBH_WEBUI_PORT='PBH WebUI 端口' \
-bitcometpostbar/bitcomet:latest
-```
-
-**bridge 网络 + 改包模式**
-
-```
-docker run -d \
---name BitComet \
---cap-add \
--v /BC目录:/BitComet \
--v /DL目录:/Downloads \
--v /PBH目录:/PeerBanHelper \
--e BITCOMET_WEBUI_USERNAME='BC WebUI 用户名' \
--e BITCOMET_WEBUI_PASSWORD='BC WebUI 密码' \
--e BITCOMET_WEBUI_PORT='BC WebUI 端口' \
--e BITCOMET_BT_PORT=‘BC BT 端口’ \
--e PBH_WEBUI_TOKEN='PBH Token' \
--e PBH_WEBUI_PORT='PBH WebUI 端口' \
-bitcometpostbar/bitcomet:latest
-```
 
 ## 网络配置
 
