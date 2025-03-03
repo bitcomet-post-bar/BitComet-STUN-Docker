@@ -90,7 +90,7 @@ BitTorrent 协议的特性上，需要向 Tracker 通告 NAPT 公网端口，其
 
 **传统模式** 的穿透通道仅支持 TCP 或 UDP 二选一。因为 TCP 与 UDP 的公网端口也不一致，而通常下载器无法分别监听不同的端口号。
 
-**改包模式** 的穿透通道可单独 TCP 或 UDP，也可两者同时启用。TCP + UDP 模式下，nftables 会基于 Tracker 服务器的 IP 地址进行 50:50 负载均衡。
+**改包模式** 的穿透通道可 TCP 或 UDP 二选一，也可两者同时启用。TCP + UDP 模式下，nftables 会基于 Tracker 服务器的 IP 地址进行 50:50 负载均衡。
 
 nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP，以免服务器频繁变更端口。但**对于 HTTPS Tracker，由于使用了中间人攻击实现解密**，nftables 检测到的服务器地址始终为 `127.0.0.1`，因此对所有 HTTPS Tracker 都会通告同一个端口号。
 
