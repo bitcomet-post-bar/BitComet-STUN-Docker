@@ -13,8 +13,7 @@ Docker Edition of BitComet Web UI by Post-Bar (unofficial mod)
 ```
 docker run -d \
 --name BitComet \
---net host NET_ADMIN \
--p 56082:56082 \
+--net host \
 -v /BC目录:/BitComet \
 -v /DL目录:/Downloads \
 -v /PBH目录:/PeerBanHelper \
@@ -32,7 +31,8 @@ bitcometpostbar/bitcomet:latest
 ```
 docker run -d \
 --name BitComet \
---cap-add \
+--cap-add NET_ADMIN \
+-p 56082:56082 \
 -v /BC目录:/BitComet \
 -v /DL目录:/Downloads \
 -v /PBH目录:/PeerBanHelper \
