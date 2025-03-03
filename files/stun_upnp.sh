@@ -60,4 +60,4 @@ ADD_UPNP
 [ $STUN_UPNP_FLAG = 1 ] && LOG 更新 ${L4PROTO^^} UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | head -1
 [ $STUN_UPNP_FLAG = 2 ] && LOG 更新 ${L4PROTO^^} UPnP 规则失败，错误信息如下 && LOG "$UPNP_RES" | tail -1
 
-[ $STUN_UPNP_CONFLICT = 1 ] && ! pgrep -f stun_keep.sh >/dev/null && exec stun_keep.sh &
+[ $STUN_UPNP_CONFLICT ] && ! pgrep -f stun_keep.sh >/dev/null && exec stun_keep.sh &
