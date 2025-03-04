@@ -64,6 +64,14 @@ docker run -d \
 bitcometpostbar/bitcomet:latest
 ```
 
+## 运行日志
+
+本镜像在启动以及 STUN 穿透通道发送变化时会输出重要的信息。
+
+可通过 `docker container logs BitComet` 或各 Docker 前端的日志功能查看。
+
+也可直接打开 `/BitComet/DockerLogs.log` 文件，内容与 Docker 日志同步。
+
 ## 穿透模式
 
 本镜像提供两种穿透模式，分别称之为 **传统模式** 和 **改包模式**。
@@ -82,9 +90,9 @@ BitTorrent 协议的特性上，需要向 Tracker 通告 NAPT 公网端口，其
 
 **传统模式** 的穿透通道仅支持 TCP 或 UDP 二选一。因为 TCP 与 UDP 的公网端口也不一致，而通常下载器无法分别监听不同的端口号。
 
-**改包模式** 的穿透通道可单独 TCP 或 UDP，也可两者同时启用。TCP + UDP 模式下，nftables 会基于 Tracker 服务器的 IP 地址进行 50:50 负载均衡。
+**改包模式** 的穿透通道可 TCP 或 UDP 二选一，也可两者同时启用。TCP + UDP 模式下，nftables 会基于 Tracker 服务器的 IP 地址进行 50:50 负载均衡。
 
-nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP，以免服务器频繁变更端口。但**对于 HTTPS Tracker，由于使用了中间人攻击实现解密**，nftables 检测到的服务器地址始终为 `127.0.0.1`，因此对所有 HTTPS Tracker 都会通告同一个端口号。
+nftables 进行 TCP + UDP 分流时，对同一 IP 地址的 Tracker 始终通告为 TCP 或 UDP 的公网端口，以免服务器侧的节点信息频繁变更。但**对于 HTTPS Tracker，由于使用了中间人攻击实现解密**，nftables 检测到的服务器地址始终为 `127.0.0.1`，因此对所有 HTTPS Tracker 都会通告同一个端口号。
 
 　*尚未确认具体会通告 TCP 还是 UDP*
 
@@ -124,7 +132,7 @@ nftables 的分流特性上，对于同一 Tracker 始终篡改为 TCP 或 UDP�
 
 可通过容器自动配置 UPnP，或用户自行配置端口映射。其中 **传统模式** 依赖 UPnP，而 **改包模式** 则不限。
 
-### 端口映射
+## 端口映射
 
 **传统模式** 下，由于 **穿透通道的本地端口与下载器的监听端口不一致且无法固定**，因此需要通过 UPnP 向网关请求一条 **内外不一致** 的端口映射规则。
 
@@ -201,7 +209,7 @@ PeerBanHelper 目录：`/PeerBanHelper`
 
 * 启用 STUN 穿透时，BitComet BT 端口会自动更新为公网端口，`BITCOMET_BT_PORT` 将作为穿透通道的本地端口
 
-* PBH 与 STUN 默认启用；如需禁用，请指定为 `0`
+* PBH 与 STUN 默认启用；如需禁用，请指定为 `0`；不指定或任何非 0 字符都是开启
 
 
 ### STUN
@@ -209,7 +217,7 @@ PeerBanHelper 目录：`/PeerBanHelper`
 | 名称 | 说明 | 默认 |
 | --- | --- | --- |
 | StunMode | 穿透模式，可接受以下值<br>`tcp`：TCP 传统模式<br>`udp`：UDP 传统模式<br>`nfttcp`：TCP 改包模式<br>`nfttcp`：UDP 改包模式<br>`nftboth`：TCP + UDP 改包模式| 自动检测<br>无 NET_ADMIN 权限则使用 TCP 传统模式<br>有 NET_ADMIN 权限则使用 TCP 改包模式 |
-| StunModeLite | 轻量改包模式<br>忽略 HTTPS Tracker，不执行解密 | 无<br>`1`为开启，留空或其他字符则关闭 |
+| StunModeHttps | HTTPS 改包开关 | 无（指定 `0` 为禁用） |
 | StunMitmEnPort | HTTPS 加密流量端口 | `58443` |
 | StunMitmDePort | HTTPS 解密流量端口 | `50080` |
 | StunHost | 指定当前容器是否 host 网络<br>`0`非 host 网络（bridge 或 macvlan 等）<br>`1`为 host 网络 | 自动检测<br>检测 `eth0` 的 MAC 地址 |

@@ -133,7 +133,7 @@ UPDATE_HTTPS() {
 	LOG 已加载 $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) 个 HTTPS Tracker
 	>StunHttpsTrackers
 }
-[ $StunModeLite ] || {
+[ "$StunModeHttps" = 0 ] || {
 	[ $(nft list set ip STUN BTTR_HTTPS 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | wc -l) = 0 ] && UPDATE_HTTPS
 	[ -f StunHttpsTrackers ] || UPDATE_HTTPS
 	[ $(($(date +%s)-$(stat -c %Y StunHttpsTrackers))) -gt 3600 ] && UPDATE_HTTPS
