@@ -395,16 +395,16 @@ START_NAT() {
 		fi
 	fi
 	if [[ $StunMode =~ nft ]];then
-		[ $StunModeLite ] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
+		[ "$StunModeHttps" = 0 ] && LOG 已指定轻量改包模式，忽略 HTTPS Tracker
 	else
 		[ $StunHost = 0 ] && LOG 如在 bridge 网络下使用传统模式，请自行解决 UPnP 的可达性
-		[ $StunModeLite ] && LOG StunModeLite 不适用于传统模式，已忽略 && unset StunModeLite
 		[ "$StunUpnp" = 0 ] && LOG 传统模式依赖 UPnP，已强制启用 && unset StunUpnp
+		[ "$StunModeHttps" = 0 ] && LOG 环境变量 StunModeHttps 不适用于传统模式，已忽略 && unset StunModeHttps
 	fi
 }
 
 # 初始化 SSLproxy
-[ "$STUN" != 0 ] && [[ $StunMode =~ nft ]] && [ ! $StunModeLite ] && {
+[ "$STUN" != 0 ] && [[ $StunMode =~ nft ]] && [ "$StunModeHttps" != 0 ] && {
 	if [ $StunMitmEnPort ]; then
 		if [[ $StunMitmEnPort =~ ^[0-9]+$ ]] && [ $StunMitmEnPort -le 65535 ]; then
 			[ $StunMitmEnPort -ge 1024 ] || LOG SSLproxy 端口指定为 1024 以下，可能无法监听
@@ -456,8 +456,8 @@ LOG_BITCOMET() {
 	while read LINE; do [[ "$LINE" =~ 'IPFilter loaded' ]] || LOG $LINE; done
 }
 START_BITCOMET() {
-	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
-	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
+	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd
+	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd
 }
 if [ "$STUN" = 0 ]; then
 	LOG 已禁用 STUN，直接启动 BitComet
@@ -476,7 +476,7 @@ else
 		[[ $StunMode =~ udp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT udp
 	}
 	# START_BITCOMET | grep -v 'IPFilter loaded' &
-	START_BITCOMET | LOG_BITCOMET
+	START_BITCOMET | LOG_BITCOMET &
 	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || {
 		LOG BitComet BT 端口未监听，3 秒后重试
 		sleep 3
