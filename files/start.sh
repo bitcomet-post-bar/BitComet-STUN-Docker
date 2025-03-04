@@ -452,6 +452,9 @@ START_NAT() {
 }
 
 # 执行 STUN 及 BitComet
+LOG_BITCOMET() {
+	while read LINE; do [[ "$LINE" =~ 'IPFilter loaded' ]] || LOG $LINE; done
+}
 START_BITCOMET() {
 	[[ $StunMode =~ nft ]] || /files/BitComet/bin/bitcometd &
 	[[ $StunMode =~ nft ]] && runuser -u bitcomet -- /files/BitComet/bin/bitcometd &
@@ -472,7 +475,8 @@ else
 		[[ $StunMode =~ tcp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT tcp
 		[[ $StunMode =~ udp|both ]] && stun_upnp.sh $STUN_ORIG_PORT $STUN_ORIG_PORT udp
 	}
-	START_BITCOMET | grep -v 'IPFilter loaded' &
+	# START_BITCOMET | grep -v 'IPFilter loaded' &
+	START_BITCOMET | LOG_BITCOMET
 	awk '{print$2,$4}' /proc/net/tcp /proc/net/tcp6 | grep 0A | grep -qiE '(0{8}|0{32}):'$(printf '%04x' $BITCOMET_BT_PORT)'' || {
 		LOG BitComet BT 端口未监听，3 秒后重试
 		sleep 3
