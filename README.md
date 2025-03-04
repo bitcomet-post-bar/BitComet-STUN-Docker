@@ -209,7 +209,7 @@ PeerBanHelper 目录：`/PeerBanHelper`
 
 * 启用 STUN 穿透时，BitComet BT 端口会自动更新为公网端口，`BITCOMET_BT_PORT` 将作为穿透通道的本地端口
 
-* PBH 与 STUN 默认启用；如需禁用，请指定为 `0`
+* PBH 与 STUN 默认启用；如需禁用，请指定为 `0`；不指定或任何非 0 字符都是开启
 
 
 ### STUN
@@ -217,7 +217,7 @@ PeerBanHelper 目录：`/PeerBanHelper`
 | 名称 | 说明 | 默认 |
 | --- | --- | --- |
 | StunMode | 穿透模式，可接受以下值<br>`tcp`：TCP 传统模式<br>`udp`：UDP 传统模式<br>`nfttcp`：TCP 改包模式<br>`nfttcp`：UDP 改包模式<br>`nftboth`：TCP + UDP 改包模式| 自动检测<br>无 NET_ADMIN 权限则使用 TCP 传统模式<br>有 NET_ADMIN 权限则使用 TCP 改包模式 |
-| StunModeLite | 轻量改包模式<br>忽略 HTTPS Tracker，不执行解密 | 无<br>`1`为开启，留空或其他字符则关闭 |
+| StunModeHttps | HTTPS 改包开关 | 无（指定 `0` 为禁用） |
 | StunMitmEnPort | HTTPS 加密流量端口 | `58443` |
 | StunMitmDePort | HTTPS 解密流量端口 | `50080` |
 | StunHost | 指定当前容器是否 host 网络<br>`0`非 host 网络（bridge 或 macvlan 等）<br>`1`为 host 网络 | 自动检测<br>检测 `eth0` 的 MAC 地址 |
