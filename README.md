@@ -211,6 +211,7 @@ PeerBanHelper 目录：`/PeerBanHelper`
 
 * PBH 与 STUN 默认启用；如需禁用，请指定为 `0`；不指定或任何非 0 字符都是开启
 
+* 显式指定 `STUN = 1` 时，即使检测结果为公网映射，仍然执行 STUN
 
 ### STUN
 
