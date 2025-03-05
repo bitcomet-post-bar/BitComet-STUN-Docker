@@ -350,8 +350,12 @@ START_NAT() {
 	unset HEX1 HEX2 HEX3 HEX4 SERVER1 SERVER2 SERVER3 SERVER4
 	START_NAT udp
 	[ "$STUN_FLAG_TCP" = 0 ] && [ "$STUN_FLAG_UDP" = 0 ] && {
-		LOG 当前网络为公网映射；自动禁用 STUN，请自行开放端口
-		export STUN=0
+		if [ "$STUN" = 1 ]; then
+			LOG 当前网络为公网映射；显示指定 STUN = 1 时，跳过自动禁用
+		else
+			LOG 当前网络为公网映射；自动禁用 STUN，请自行开放端口
+			export STUN=0
+		fi
 	}
 	[ "$STUN_FLAG_TCP" = 2 ] && [ "$STUN_FLAG_UDP" = 2 ] && {
 		LOG 当前网络为对称映射；自动禁用 STUN，请优化 NAT 类型后再尝试
