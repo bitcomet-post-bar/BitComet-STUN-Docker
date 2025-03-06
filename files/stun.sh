@@ -71,7 +71,7 @@ GET_NAT() {
 }
 
 # 初始化 STUN
-[ -s /tmp/StunServers_$L4PROTO.txt ] || sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
+sort -R StunServers.txt >/tmp/StunServers_$L4PROTO.txt
 STUN_TIME=0
 STUN_TIME_FLAG=1
 LOG 当前 STUN 心跳间隔为 $StunInterval 秒
