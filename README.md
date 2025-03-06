@@ -213,6 +213,8 @@ PeerBanHelper 目录：`/PeerBanHelper`
 
 * 显式指定 `STUN = 1` 时，即使检测结果为公网映射，仍然执行 STUN
 
+　*公网映射下若强制开启传统模式 STUN，会提示端口占用*
+
 ### STUN
 
 | 名称 | 说明 | 默认 |
