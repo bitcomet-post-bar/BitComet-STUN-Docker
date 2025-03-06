@@ -281,16 +281,14 @@ LOG BitComet BT 端口当前为 $BITCOMET_BT_PORT
 # 检测 NAT 映射行为
 GET_NAT() {
 	LOG 使用 $1/$L4PROTO 进行第 $2 次绑定请求
-	for SERVER in $(sort -R /tmp/StunServers_$L4PROTO.txt); do
+	for SERVER in $(cat /tmp/StunServers_$L4PROTO.txt); do
+		sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
 		local HEX=$(echo "000100002112a442$(head -c 12 /dev/urandom | xxd -p)" | xxd -r -p | eval socat - ${L4PROTO}4:$SERVER,connect-timeout=2,reuseport,sourceport=$1$STUN_IFACE 2>/dev/null | xxd -p -c 0 | grep -oE '002000080001.{12}')
-		if [ $HEX ]; then
+		[ $HEX ] && {
 			eval HEX$2=$HEX
 			eval SERVER$2=$SERVER
 			break
-		else
-			# LOG STUN 服务器 $SERVER 不可用，后续排除
-			sed '/^'$SERVER'$/d' -i /tmp/StunServers_$L4PROTO.txt
-		fi
+		}
 	done
 }
 START_NAT() {
@@ -349,6 +347,7 @@ START_NAT() {
 	START_NAT tcp
 	unset HEX1 HEX2 HEX3 HEX4 SERVER1 SERVER2 SERVER3 SERVER4
 	START_NAT udp
+	rm -f /tmp/StunServers_*
 	[ "$STUN_FLAG_TCP" = 0 ] && [ "$STUN_FLAG_UDP" = 0 ] && {
 		if [ "$STUN" = 1 ]; then
 			LOG 当前网络为公网映射；显示指定 STUN = 1 时，跳过自动禁用
